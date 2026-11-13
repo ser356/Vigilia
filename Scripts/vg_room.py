@@ -902,10 +902,11 @@ def build_lighting(info):
         "color_gain": unreal.Vector4(x=0.9, y=1.0, z=0.96, w=1.0),
         "color_saturation_highlights": unreal.Vector4(x=0.7, y=0.7, z=0.7, w=1.0),
         "color_gamma_shadows": unreal.Vector4(x=0.95, y=1.0, z=1.03, w=1.0),
-        "lumen_scene_lighting_quality": 2.0,
-        "lumen_scene_detail": 2.0,
-        "lumen_final_gather_quality": 2.0,
-        "lumen_reflection_quality": 2.0,
+        # Calidad de Lumen por defecto (1). Con 2 el M4 iba a tirones en el editor; subir solo para capturas.
+        "lumen_scene_lighting_quality": 1.0,
+        "lumen_scene_detail": 1.0,
+        "lumen_final_gather_quality": 1.0,
+        "lumen_reflection_quality": 1.0,
         "ambient_occlusion_intensity": 0.6,
     }
     for name, value in values.items():

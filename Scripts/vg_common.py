@@ -398,10 +398,22 @@ class MeshGroup(object):
 
 def group_for(resolved):
     meshes = [d.get_asset() for d in resolved.meshes]
-    if resolved.is_fab and len(meshes) > 1:
-        # En Fab varias mallas en una carpeta suelen ser variantes, no piezas: se usa la mas voluminosa.
-        return MeshGroup([MeshGroup(meshes).main])
-    return MeshGroup(meshes)
+    if not (resolved.is_fab and len(meshes) > 1):
+        return MeshGroup(meshes)
+    # Varias mallas en una carpeta de Fab pueden ser variantes (se usa una) o piezas de un mismo objeto
+    # (pantalla + pie de una lampara: se usan todas). Se decide por el tamano real esperado del hueco.
+    whole = MeshGroup(meshes)
+    main = MeshGroup([whole.main])
+    if max(whole.size) <= max(main.size) * 1.1:
+        return main  # se solapan: variantes o LODs del mismo objeto
+    expected = resolved.spec.get("size_cm")
+    if expected:
+        err_whole = abs(math.log(max(whole.size) / float(expected)))
+        err_main = abs(math.log(max(main.size) / float(expected)))
+        if err_whole < err_main:
+            log("'%s': %d piezas combinadas (%.0f cm)" % (resolved.name, len(meshes), max(whole.size)))
+            return whole
+    return main
 
 
 def _axis_dir(axis_index, sign):
