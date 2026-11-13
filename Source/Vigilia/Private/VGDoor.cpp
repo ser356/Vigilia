@@ -1,6 +1,7 @@
 #include "VGDoor.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
+#include "StaticMeshResources.h"
 
 AVGDoor::AVGDoor()
 {
@@ -24,8 +25,41 @@ FVector AVGDoor::SetupDoorMesh(UStaticMesh* InMesh)
 	const FBox Box = InMesh->GetBoundingBox();
 	const FVector Size = Box.GetSize();
 	// El ancho de la hoja es la mayor dimension horizontal; debe quedar sobre +Y.
-	const FRotator Rot = (Size.X > Size.Y) ? FRotator(0.f, 90.f, 0.f) : FRotator::ZeroRotator;
-	const FBox R = Box.TransformBy(FTransform(Rot));
+	FRotator Rot = (Size.X > Size.Y) ? FRotator(0.f, 90.f, 0.f) : FRotator::ZeroRotator;
+	FBox R = Box.TransformBy(FTransform(Rot));
+
+	// La bisagra debe quedar en el lado contrario al pomo. El pomo es lo que mas sobresale del
+	// grosor de la hoja a media altura: si esta cerca de la bisagra (Y minima), se gira la malla 180.
+	if (InMesh->GetRenderData() && InMesh->GetRenderData()->LODResources.Num() > 0)
+	{
+		const FPositionVertexBuffer& Positions = InMesh->GetRenderData()->LODResources[0].VertexBuffers.PositionVertexBuffer;
+		const FTransform RotOnly(Rot);
+		const double CenterX = (R.Min.X + R.Max.X) * 0.5;
+		const double HalfThickness = FMath::Max((R.Max.X - R.Min.X) * 0.5, 0.1);
+		const double ZLow = R.Min.Z + (R.Max.Z - R.Min.Z) * 0.3;
+		const double ZHigh = R.Min.Z + (R.Max.Z - R.Min.Z) * 0.65;
+		double SumY = 0.0;
+		int32 Count = 0;
+		for (uint32 Index = 0; Index < Positions.GetNumVertices(); ++Index)
+		{
+			const FVector P = RotOnly.TransformPosition(FVector(Positions.VertexPosition(Index)));
+			if (P.Z >= ZLow && P.Z <= ZHigh && FMath::Abs(P.X - CenterX) > HalfThickness * 0.6)
+			{
+				SumY += P.Y;
+				++Count;
+			}
+		}
+		if (Count > 0)
+		{
+			const double KnobY = SumY / Count;
+			const bool bKnobNearHinge = KnobY < (R.Min.Y + R.Max.Y) * 0.5;
+			if (bKnobNearHinge != bSwapHingeSide)
+			{
+				Rot.Yaw += 180.f;
+				R = Box.TransformBy(FTransform(Rot));
+			}
+		}
+	}
 
 	const FVector Offset(-(R.Min.X + R.Max.X) * 0.5f, -R.Min.Y, -R.Min.Z);
 	Mesh->SetRelativeLocationAndRotation(Offset, Rot);

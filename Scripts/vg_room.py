@@ -21,6 +21,7 @@ HX, HY, H, T = 260.0, 205.0, 255.0, 20.0
 TW = 10.0
 CORR_X0, CORR_X1, CORR_Y0, CORR_Y1 = -720.0, 720.0, -355.0, -HY - T   # pasillo de 14 m
 HOUSE_BOTTOM = -735.0
+JAMB = 6.0   # ancho de las jambas de las puertas
 
 actor_sub = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
 level_sub = unreal.get_editor_subsystem(unreal.LevelEditorSubsystem)
@@ -410,7 +411,11 @@ def build_shell(res, mats):
     else:
         door_w, door_t, door_h = 82.5, 4.0, 203.0
     door_x0 = 250.0 - 12.0 - door_w
-    opening = (door_x0 - 1.0, door_x0 + door_w + 1.0, 0.0, door_h + 1.0)
+    framed = door_res is not None and door_t >= 11.0
+    # Si la puerta no trae marco, el hueco deja sitio para jambas DENTRO del hueco (asi tapan los cantos
+    # de la pared, que con la textura proyectada se verian estirados).
+    jw = 0.0 if framed else JAMB
+    opening = (door_x0 - jw - 1.0, door_x0 + door_w + jw + 1.0, 0.0, door_h + jw + 1.0)
     info["door"] = dict(x0=door_x0, w=door_w, t=door_t, h=door_h, opening=opening)
 
     # --- Ventana (pared norte) ---
@@ -445,12 +450,12 @@ def build_shell(res, mats):
         box("base_south_b", (opening[1] + 7.0, -HY, 0), (HX, -HY + bt, bh), mats["trim"], collision=False)
 
     # --- Marco de la puerta (si el modelo no trae el suyo) ---
-    framed = door_res is not None and door_t >= 11.0
     if not framed:
         jy0, jy1 = -HY - T - 1.5, -HY + 1.5
-        box("door_jamb_l", (opening[0] - 6.0, jy0, 0), (opening[0], jy1, opening[3] + 6.0), mats["trim"])
-        box("door_jamb_r", (opening[1], jy0, 0), (opening[1] + 6.0, jy1, opening[3] + 6.0), mats["trim"])
-        box("door_lintel", (opening[0], jy0, opening[3]), (opening[1], jy1, opening[3] + 6.0), mats["trim"])
+        o0, o1, o3 = opening[0], opening[1], opening[3]
+        box("door_jamb_l", (o0, jy0, 0), (o0 + JAMB, jy1, o3), mats["trim"])
+        box("door_jamb_r", (o1 - JAMB, jy0, 0), (o1, jy1, o3), mats["trim"])
+        box("door_lintel", (o0, jy0, o3 - JAMB), (o1, jy1, o3), mats["trim"])
     info["door"]["framed"] = framed
     return info
 
@@ -1350,16 +1355,17 @@ def wall_run(key, axis, a0, a1, f0, f1, mat, openings=(), skip=(), base_side=Non
 
 
 def house_door_frame(name, axis, c0, c1, f0, f1, mats):
-    """Marco (jambas + dintel) que atraviesa el grosor del tabique."""
-    jw = 6.0
+    """Marco (jambas + dintel) DENTRO del hueco [c0, c1], atravesando todo el grosor del tabique."""
+    jw = JAMB
+    top = DOOR_H + 1.0 + jw
     if axis == "X":
-        box(name + "_jl", (c0 - jw, f0 - 1.5, 0), (c0, f1 + 1.5, DOOR_H + 1 + jw), mats["trim"])
-        box(name + "_jr", (c1, f0 - 1.5, 0), (c1 + jw, f1 + 1.5, DOOR_H + 1 + jw), mats["trim"])
-        box(name + "_jt", (c0, f0 - 1.5, DOOR_H + 1), (c1, f1 + 1.5, DOOR_H + 1 + jw), mats["trim"])
+        box(name + "_jl", (c0, f0 - 1.5, 0), (c0 + jw, f1 + 1.5, top), mats["trim"])
+        box(name + "_jr", (c1 - jw, f0 - 1.5, 0), (c1, f1 + 1.5, top), mats["trim"])
+        box(name + "_jt", (c0, f0 - 1.5, DOOR_H + 1.0), (c1, f1 + 1.5, top), mats["trim"])
     else:
-        box(name + "_jl", (f0 - 1.5, c0 - jw, 0), (f1 + 1.5, c0, DOOR_H + 1 + jw), mats["trim"])
-        box(name + "_jr", (f0 - 1.5, c1, 0), (f1 + 1.5, c1 + jw, DOOR_H + 1 + jw), mats["trim"])
-        box(name + "_jt", (f0 - 1.5, c0, DOOR_H + 1), (f1 + 1.5, c1, DOOR_H + 1 + jw), mats["trim"])
+        box(name + "_jl", (f0 - 1.5, c0, 0), (f1 + 1.5, c0 + jw, top), mats["trim"])
+        box(name + "_jr", (f0 - 1.5, c1 - jw, 0), (f1 + 1.5, c1, top), mats["trim"])
+        box(name + "_jt", (f0 - 1.5, c0, DOOR_H + 1.0), (f1 + 1.5, c1, top), mats["trim"])
 
 
 def spawn_house_door(key, axis, along0, wall_center, res, mats, locked=False):
@@ -1425,7 +1431,7 @@ def build_house(res, mats, info, out):
             DOOR_H = h
 
     def hole(c):
-        return [(c - DOOR_W * 0.5 - 1.0, c + DOOR_W * 0.5 + 1.0, 0.0, DOOR_H + 1.0)]
+        return [(c - DOOR_W * 0.5 - JAMB - 1.0, c + DOOR_W * 0.5 + JAMB + 1.0, 0.0, DOOR_H + JAMB + 1.0)]
 
     # Huecos por estancia y lado. Las puertas de cocina/bano/dormitorio (lado N de su estancia) atraviesan
     # tambien el lado S del pasillo; las del fondo y la entrada, los lados E y W del pasillo.
@@ -1467,7 +1473,7 @@ def build_house(res, mats, info, out):
         else:
             axis, wall_c = "Y", r["x1"]
             f0, f1 = r["x1"] - TW, r["x1"] + TW
-        c0, c1 = c - DOOR_W * 0.5 - 1.0, c + DOOR_W * 0.5 + 1.0
+        c0, c1 = c - DOOR_W * 0.5 - JAMB - 1.0, c + DOOR_W * 0.5 + JAMB + 1.0
         house_door_frame("frame_" + key, axis, c0, c1, f0, f1, mats)
         locked = key in ("door_bathroom", "door_front")
         house["doors"][key] = spawn_house_door(key, axis, c - DOOR_W * 0.5, wall_c, res, mats, locked)

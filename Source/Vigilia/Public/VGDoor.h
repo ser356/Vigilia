@@ -40,6 +40,10 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vigilia")
 	TObjectPtr<USceneComponent> Hinge;
 
+	/** Invierte el lado de la bisagra que se detecta automaticamente por la posicion del pomo. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Door")
+	bool bSwapHingeSide = false;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Door")
 	float OpenAngle = 96.f;
 
