@@ -353,3 +353,94 @@ def canvas_master(default_texture):
     _to_prop(_mul(mat, _mul(mat, desat, "", tint, "", -250, 100), "", dark, "", -100, 150), "", MP.MP_BASE_COLOR)
     _to_prop(_scalar(mat, "Roughness", 0.55, -450, 480), "", MP.MP_ROUGHNESS)
     return _finish(mat)
+
+
+def surface_auto_master(default_base, default_normal, default_orm):
+    """Material de pared que elige la proyeccion segun hacia donde mira cada cara (X, Y o Z del mundo).
+    Con una sola proyeccion por material, los cantos de las paredes (esquinas, huecos de puerta y
+    ventana, finales de tabique) mostraban la textura estirada en franjas."""
+    mat, created = _new_material("M_Surface_Auto")
+    if not created:
+        return mat
+    safe_set(mat, "tangent_space_normal", False)
+
+    def mask(src, r, g, b, x, y):
+        node = _expr(mat, unreal.MaterialExpressionComponentMask, x, y)
+        node.set_editor_property("r", r)
+        node.set_editor_property("g", g)
+        node.set_editor_property("b", b)
+        node.set_editor_property("a", False)
+        _connect(src, "", node, "")
+        return node
+
+    def const2(a, b, x, y):
+        node = _expr(mat, unreal.MaterialExpressionConstant2Vector, x, y)
+        node.set_editor_property("r", a)
+        node.set_editor_property("g", b)
+        return node
+
+    def lerp(a, b, alpha, x, y):
+        node = _expr(mat, unreal.MaterialExpressionLinearInterpolate, x, y)
+        _connect(a, "", node, "A")
+        _connect(b, "", node, "B")
+        _connect(alpha, "", node, "Alpha")
+        return node
+
+    def step(a, b, x, y):
+        """1 si a > b (corte brusco), 0 si no."""
+        diff = _expr(mat, unreal.MaterialExpressionSubtract, x, y)
+        _connect(a, "", diff, "A")
+        _connect(b, "", diff, "B")
+        k = _expr(mat, unreal.MaterialExpressionConstant, x, y + 80)
+        k.set_editor_property("r", 1000.0)
+        sat = _expr(mat, unreal.MaterialExpressionSaturate, x + 150, y)
+        _connect(_mul(mat, diff, "", k, "", x + 80, y), "", sat, "")
+        return sat
+
+    wp = _expr(mat, unreal.MaterialExpressionWorldPosition, -2400, 0)
+    n = _expr(mat, unreal.MaterialExpressionVertexNormalWS, -2400, 400)
+    an = _expr(mat, unreal.MaterialExpressionAbs, -2250, 400)
+    _connect(n, "", an, "")
+    nx = mask(an, True, False, False, -2100, 350)
+    ny = mask(an, False, True, False, -2100, 450)
+    nz = mask(an, False, False, True, -2100, 550)
+    nmax_xy = _expr(mat, unreal.MaterialExpressionMax, -1950, 420)
+    _connect(nx, "", nmax_xy, "A")
+    _connect(ny, "", nmax_xy, "B")
+    t_y = step(nx, ny, -1800, 350)        # 1: la cara mira en X -> proyeccion YZ
+    t_z = step(nz, nmax_xy, -1800, 550)   # 1: la cara mira en Z -> proyeccion XY
+
+    uv_xz = _mul(mat, mask(wp, True, False, True, -2100, -200), "", const2(1.0, -1.0, -2100, -100), "", -1950, -200)
+    uv_yz = _mul(mat, mask(wp, False, True, True, -2100, 0), "", const2(1.0, -1.0, -2100, 100), "", -1950, 0)
+    uv_xy = mask(wp, True, True, False, -2100, 200)
+    uv_wall = lerp(uv_xz, uv_yz, t_y, -1650, -100)
+    uv_world = lerp(uv_wall, uv_xy, t_z, -1500, 0)
+    tile = _scalar(mat, "TileSize", 200.0, -1500, 200)
+    uv = _expr(mat, unreal.MaterialExpressionDivide, -1350, 0)
+    _connect(uv_world, "", uv, "A")
+    _connect(tile, "", uv, "B")
+
+    base = _tex_param(mat, "BaseColor", default_base, -1000, -300)
+    _connect(uv, "", base, "UVs")
+    tint = _vector(mat, "Tint", (1, 1, 1, 1), -1000, -520)
+    _to_prop(_mul(mat, base, "RGB", tint, "", -700, -400), "", MP.MP_BASE_COLOR)
+    orm = _tex_param(mat, "ORM", default_orm, -1000, 0)
+    _connect(uv, "", orm, "UVs")
+    rough_scale = _scalar(mat, "RoughnessScale", 1.0, -1000, 220)
+    _to_prop(_mul(mat, orm, "G", rough_scale, "", -700, 60), "", MP.MP_ROUGHNESS)
+    _to_prop(orm, "R", MP.MP_AMBIENT_OCCLUSION)
+
+    # Normal: tangente y bitangente de la proyeccion activa, en espacio de mundo.
+    nrm = _tex_param(mat, "Normal", default_normal, -1000, 420)
+    _connect(uv, "", nrm, "UVs")
+    strength = _scalar(mat, "NormalStrength", 1.0, -1000, 680)
+    t_vec = lerp(lerp(_const3(mat, (1, 0, 0), -900, 800), _const3(mat, (0, 1, 0), -900, 900), t_y, -750, 850),
+                 _const3(mat, (1, 0, 0), -750, 1000), t_z, -600, 900)
+    b_vec = lerp(_const3(mat, (0, 0, -1), -900, 1100), _const3(mat, (0, 1, 0), -900, 1200), t_z, -600, 1150)
+    nx_t = _mul(mat, _mul(mat, nrm, "R", strength, "", -560, 380), "", t_vec, "", -400, 420)
+    ny_t = _mul(mat, _mul(mat, nrm, "G", strength, "", -560, 520), "", b_vec, "", -400, 560)
+    nz_t = _mul(mat, nrm, "B", n, "", -400, 700)
+    world_normal = _expr(mat, unreal.MaterialExpressionNormalize, -100, 560)
+    _connect(_add(mat, _add(mat, nx_t, ny_t, -250, 480), nz_t, -180, 600), "", world_normal, "")
+    _to_prop(world_normal, "", MP.MP_NORMAL)
+    return _finish(mat)

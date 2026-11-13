@@ -341,6 +341,9 @@ def build_materials(res):
         raise RuntimeError("Texturas base incompletas en %s" % trim.folder)
 
     masters = {p: vm.surface_master(p, defaults["BaseColor"], defaults["Normal"], defaults["ORM"]) for p in ("XY", "XZ", "YZ")}
+    # Paredes: proyeccion automatica por cara (sin cantos estirados). XZ e YZ apuntan al mismo material.
+    auto = vm.surface_auto_master(defaults["BaseColor"], defaults["Normal"], defaults["ORM"])
+    masters["XZ"] = masters["YZ"] = auto
     mats = {"paint": vm.paint_master(), "glass": vm.glass_master()}
     fabric = vm.fabric_master(defaults["BaseColor"], defaults["Normal"], defaults["ORM"])
     noise = eal.load_asset(ROOT + "/Textures/T_TVNoise")
@@ -475,9 +478,7 @@ def build_door(res, mats, info):
     if door_res:
         door.setup_door_mesh(group_for(door_res).main)
         STATE["used"]["door"] = door_res
-        if STATE.get("door_scale", 1.0) != 1.0:
-            # Escala en el eje local Y = ancho de la hoja (la bisagra esta en el origen y no se mueve).
-            door.set_actor_scale3d(V(1.0, STATE["door_scale"], 1.0))
+        widen_door(door)
     else:
         # Prototipo: hoja lisa hasta que se anada la puerta de Megascans desde Fab.
         door.setup_door_mesh(eal.load_asset("/Engine/BasicShapes/Cube"))
@@ -1376,6 +1377,15 @@ def house_door_frame(name, axis, c0, c1, f0, f1, mats):
         box(name + "_jt", (f0 - 1.5, c0, DOOR_H + 1.0), (f1 + 1.5, c1, top), mats["trim"])
 
 
+def widen_door(door):
+    """Ensancha la hoja escalando la BISAGRA (no el actor): la escala gira con la hoja. Escalar el actor
+    deformaba la puerta al abrirse (cizalla) y la convertia en un bloque que tapaba el paso."""
+    scale = STATE.get("door_scale", 1.0)
+    if scale != 1.0:
+        hinge = door.get_editor_property("hinge")
+        hinge.set_relative_scale3d(V(1.0, scale, 1.0))
+
+
 def spawn_house_door(key, axis, along0, wall_center, res, mats, locked=False):
     """Hoja con bisagra en along0; para paredes a lo largo de X la hoja avanza en +X, en Y en +Y."""
     yaw = -90.0 if axis == "X" else 0.0
@@ -1384,8 +1394,7 @@ def spawn_house_door(key, axis, along0, wall_center, res, mats, locked=False):
     door_res = res.get("door")
     if door_res:
         door.setup_door_mesh(group_for(door_res).main)
-        if STATE.get("door_scale", 1.0) != 1.0:
-            door.set_actor_scale3d(V(1.0, STATE["door_scale"], 1.0))
+        widen_door(door)
     else:
         door.setup_door_mesh(eal.load_asset("/Engine/BasicShapes/Cube"))
         mesh = door.get_editor_property("mesh")
