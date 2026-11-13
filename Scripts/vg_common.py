@@ -505,3 +505,47 @@ def cap_fab_textures(max_size=2048, datas=None):
     if capped:
         log("Texturas de Fab limitadas a %d px: %d" % (max_size, capped))
     return capped
+
+
+def slim_raw_meshes(resolved_list, keep_percent=0.12, df_scale=0.5):
+    """Las mallas Raw de Megascans traen millones de triangulos: en un Mac de 32 GB llenan la memoria
+    (Nanite, campos de distancia de Lumen, datos fuente). Se reducen una vez a un % de triangulos
+    (Nanite sigue mostrando el detalle de cerca) y se baja la resolucion del campo de distancia.
+    No toca el archivo original de Fab: si se quiere volver atras, basta con poner Keep Triangle
+    Percent a 100 en la malla. Devuelve cuantas mallas se han reducido."""
+    sub = unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem)
+    slimmed = 0
+    meshes = []
+    for resolved in resolved_list:
+        for data in resolved.meshes:
+            if "/raw/" in str(data.package_path).lower() + "/":
+                meshes.append(data)
+    if not meshes:
+        return 0
+    with unreal.ScopedSlowTask(len(meshes), "Vigilia: aligerando mallas Raw de Megascans (solo la primera vez)") as task:
+        task.make_dialog(False)
+        for data in meshes:
+            task.enter_progress_frame(1, str(data.asset_name))
+            mesh = data.get_asset()
+            try:
+                nanite = mesh.get_editor_property("nanite_settings")
+                if nanite.get_editor_property("keep_percent_triangles") <= keep_percent + 0.001:
+                    continue
+                nanite.set_editor_property("keep_percent_triangles", keep_percent)
+                sub.set_nanite_settings(mesh, nanite, True)
+                try:
+                    build = sub.get_lod_build_settings(mesh, 0)
+                    if build.get_editor_property("distance_field_resolution_scale") > df_scale:
+                        build.set_editor_property("distance_field_resolution_scale", df_scale)
+                        sub.set_lod_build_settings(mesh, 0, build)
+                except Exception as exc:  # noqa: BLE001
+                    warn("Campo de distancia de %s: %s" % (mesh.get_name(), exc))
+                eal.save_loaded_asset(mesh, False)
+                slimmed += 1
+            except Exception as exc:  # noqa: BLE001
+                warn("No se pudo aligerar %s: %s" % (mesh.get_name(), exc))
+            # Libera lo cargado de cada malla antes de la siguiente.
+            unreal.SystemLibrary.collect_garbage()
+    if slimmed:
+        log("Mallas Raw aligeradas: %d" % slimmed)
+    return slimmed

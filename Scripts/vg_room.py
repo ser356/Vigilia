@@ -6,7 +6,7 @@ import os
 import unreal
 
 import vg_materials as vm
-from vg_common import (PROJECT_DIR, cap_fab_textures, ROOT, SOURCE_DIR, WARNINGS, assets_under, configure_texture, eal, front_direction,
+from vg_common import (PROJECT_DIR, cap_fab_textures, slim_raw_meshes, ROOT, SOURCE_DIR, WARNINGS, assets_under, configure_texture, eal, front_direction,
                        gltf_mapping, group_for, import_files, load_json, log, prepare_meshes, resolve_all, safe_set,
                        warn, yaw_of)
 
@@ -1490,6 +1490,9 @@ def build_house(res, mats, info, out):
             lamp.setup_mesh(g.main, V(-g.center[0], g.center[1], g.min[2]), R(roll=180.0))
         set_bool(lamp, "directly_interactable", False)
         lamp.setup_light(V(0, 0, -4.0), 65.0, 2500.0, 520.0)
+        if i != 1:
+            # Rendimiento: solo la bombilla central proyecta sombras (cada sombra cuesta en la GPU del M4).
+            safe_set(lamp.get_editor_property("light"), "cast_shadows", False)
         safe_set(lamp, "switch_sound", sfx("switch_click"))
         mark(lamp, "corridor_bulb_%d" % (i + 1), "House/Lights")
         cord = actor_sub.spawn_actor_from_object(eal.load_asset("/Engine/BasicShapes/Cylinder"), V(x, CORR_YC, H - 14.0), R())
@@ -1511,6 +1514,7 @@ def build_house(res, mats, info, out):
             lamp.setup_mesh(g.main, V(-g.center[0], -g.center[1], -g.max[2]), R())
         set_bool(lamp, "directly_interactable", False)
         lamp.setup_light(V(0, 0, -14.0), lumens, 5600.0, 650.0)
+        safe_set(lamp.get_editor_property("light"), "cast_shadows", False)
         set_bool(lamp, "on", on)
         mark(lamp, name, "House/Lights")
         house["lamps"][name] = lamp
@@ -1720,6 +1724,7 @@ def build():
         STATE["res"] = res
         # Solo las texturas de los assets de Fab que se usan: cargar todo /Game/Fab (Raw a 8K) disparaba la memoria.
         cap_fab_textures(2048, [d for r in res.values() if r and r.is_fab for d in r.textures])
+        slim_raw_meshes([r for r in res.values() if r and r.is_fab])
         for name, resolved in res.items():
             if resolved and name in manifest["slots"]:
                 prepare_meshes(resolved)
