@@ -214,10 +214,64 @@ def make_audio():
     write_wav("object_putdown", impact(0.3, 90.0, 1800.0, 0.03, 140.0), 0.5)
 
 
+def make_horror_audio():
+    # Tres golpes secos en una puerta de madera, con la pausa de alguien que espera respuesta.
+    knock = np.zeros(int(2.4 * SR))
+    for start, gain in ((0.0, 1.0), (0.42, 0.9), (0.84, 1.05)):
+        hit = impact(0.5, 90.0, 1600.0, 0.045, 150.0) + 0.35 * impact(0.5, 600.0, 3500.0, 0.015)
+        i = int(start * SR)
+        knock[i:i + len(hit)] += hit[: len(knock) - i] * gain
+    write_wav("door_knock", lowpass(knock, 2400.0), 0.9)
+
+    # Timbre de telefono de los 90 (campanilla electromecanica): 1,5 s sonando, 3 s en silencio.
+    n = int(4.5 * SR)
+    t = np.arange(n) / SR
+    on = (t < 1.5).astype(float)
+    hammer = 0.5 + 0.5 * np.sign(np.sin(2 * math.pi * 20.0 * t))
+    bell = (np.sin(2 * math.pi * 1150 * t) + 0.7 * np.sin(2 * math.pi * 1385 * t) + 0.25 * np.sin(2 * math.pi * 2780 * t))
+    ring = bell * lowpass(hammer, 120.0) * on
+    ring *= np.minimum(1.0, (1.5 - t).clip(0) * 40.0)
+    write_wav("phone_ring_loop", ring, 0.7)
+
+    # Llamada: linea con ruido, respiracion lenta y un murmullo ininteligible en banda telefonica.
+    n = int(11.0 * SR)
+    t = np.arange(n) / SR
+    line = bandpass(noise(n), 300.0, 3400.0) * 0.06
+    breath_env = np.clip(np.sin(2 * math.pi * t / 4.2), 0, None) ** 2
+    breathing = bandpass(noise(n), 400.0, 2600.0) * breath_env * 0.5
+    pulses = np.zeros(n)
+    period = int(SR / 92.0)
+    pulses[::period] = 1.0
+    syllables = np.clip(lowpass(noise(n), 4.0) * 60.0, 0, 1) * (t > 5.5)
+    voice = (bandpass(pulses, 500.0, 900.0) + 0.6 * bandpass(pulses, 1100.0, 1500.0)) * syllables * 8.0
+    call = bandpass(line + breathing + voice, 300.0, 3400.0)
+    write_wav("phone_voice", call, 0.6)
+
+    # Exhalacion cercana, a la altura de la nuca.
+    n = int(1.8 * SR)
+    t = np.arange(n) / SR
+    env_b = np.sin(np.pi * np.clip(t / 1.6, 0, 1)) ** 1.5
+    exhale = bandpass(noise(n), 250.0, 2200.0) * env_b + 0.08 * bandpass(noise(n), 90.0, 300.0) * env_b
+    write_wav("breath", exhale, 0.55)
+
+    # Tres campanadas graves del reloj de pie (parciales inarmonicos de campana).
+    n = int(7.5 * SR)
+    chime = np.zeros(n)
+    for k in range(3):
+        start = int(k * 2.3 * SR)
+        m = n - start
+        tt = np.arange(m) / SR
+        strike = sum(a * np.sin(2 * math.pi * 330.0 * r * tt) * np.exp(-tt / d)
+                     for r, a, d in ((0.5, 0.6, 3.0), (1.0, 1.0, 2.2), (2.0, 0.45, 1.2), (2.76, 0.3, 0.8), (5.4, 0.12, 0.4)))
+        chime[start:] += strike * np.minimum(tt / 0.003, 1.0)
+    write_wav("clock_chime", chime, 0.8)
+
+
 if __name__ == "__main__":
     os.makedirs(GEN, exist_ok=True)
     os.makedirs(AUDIO, exist_ok=True)
     make_noise_texture()
     make_curtain()
     make_audio()
+    make_horror_audio()
     print("Recursos generados en", GEN, "y", AUDIO)

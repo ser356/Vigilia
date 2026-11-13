@@ -15,6 +15,7 @@
 #include "InputAction.h"
 #include "InputMappingContext.h"
 #include "InputModifiers.h"
+#include "GameFramework/GameUserSettings.h"
 
 AVGPlayerCharacter::AVGPlayerCharacter()
 {
@@ -331,4 +332,13 @@ void AVGPlayerCharacter::VGInvertY(bool bInvert)
 {
 	bInvertLookY = bInvert;
 	SaveConfig();
+}
+
+void AVGPlayerCharacter::VGQuality(int32 Level)
+{
+	if (UGameUserSettings* Settings = UGameUserSettings::GetGameUserSettings())
+	{
+		Settings->SetOverallScalabilityLevel(FMath::Clamp(Level, 0, 3));
+		Settings->ApplySettings(false);
+	}
 }

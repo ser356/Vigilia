@@ -641,6 +641,7 @@ def furnish(res, mats, info, photos):
         except Exception as exc:  # noqa: BLE001
             warn("Atenuacion del reloj: %s" % exc)
         mark(tick, "clock_tick", "Audio")
+        out["clock_tick"] = tick
 
     # --- Planta, radiocasete grande y radiador ---
     p = prep("plant")
@@ -703,7 +704,10 @@ def furnish(res, mats, info, photos):
             out["vase"] = put_on(p, side, dx=-4.0, dy=side.wy * 0.22)
         p = prep("telephone", face_yaw=0.0)
         if p:
-            out["telephone"] = put_on(p, side, dx=4.0, dy=0.0)
+            out["telephone"] = put_on(p, side, dx=4.0, dy=0.0, cls=unreal.VGPhone, folder="Interactables")
+            if out["telephone"]:
+                safe_set(out["telephone"].actor, "ring_sound", sfx("phone_ring_loop"))
+                safe_set(out["telephone"].actor, "answer_sound", sfx("phone_voice"))
         p = prep("book_old", tilt=None)
         if p and not res.get("telephone"):
             item = put_on(p, side, dx=5.0, dy=0.0, cls=unreal.VGExaminable, folder="Interactables")
@@ -996,6 +1000,99 @@ def build_gameplay(out, door, info, mats):
     if lamp:
         t.add_step(action("LampOff"), lamp, 0.6, None, identity, False)
     t.add_step(action("PlaySound"), None, 2.4, sfx("creak_wood_02"), unreal.Transform(location=V(-260, 180, 0)), False)
+
+    build_scripted_events(out, door, info, lamp, tv)
+
+
+def at(trigger_actor, x, y, z):
+    """Offset para PlaySound sin Target: posicion absoluta (x, y, z) relativa al trigger."""
+    c = trigger_actor.get_actor_location()
+    return unreal.Transform(location=V(x - c.x, y - c.y, z - c.z))
+
+
+def build_scripted_events(out, door, info, lamp, tv):
+    """Escalada de la partida. Todo es configurable aqui: tiempos (s desde el inicio), posiciones y orden.
+
+    ~75 s   Pasos en el pasillo que se acercan, se detienen junto a la puerta y tres golpes. Silencio.
+    ~100 s+ Al volver junto a la puerta, el sillon se ha girado hacia ella (si no lo miras).
+    ~120 s+ Junto al televisor: alguien respira detras de ti; la lampara parpadea.
+    ~150 s  Suena el telefono. Si contestas: respiracion y murmullo, el reloj se para, la tele se
+            enciende sola, apagon de 3 s y, al volver la luz, el oso esta frente a la puerta.
+            Si no contestas: deja de sonar y la puerta se cierra de golpe.
+    ~210 s  El reloj da tres campanadas y deja de hacer tic-tac.
+    """
+    identity = unreal.Transform()
+    d = info["door"]
+    hall = info["hall"]
+    room_box = ((0.0, 0.0, 120.0), (HX - 10.0, HY - 10.0, 120.0))
+    door_cx = d["x0"] + d["w"] * 0.5
+    hall_y = (hall["y0"] + hall["y1"]) * 0.5
+
+    def auto(key, seconds):
+        return trigger(key, room_box[0], room_box[1], auto_fire_after=seconds,
+                       require_player_inside=True, fire_on_overlap=False)
+
+    # --- Pasos en el pasillo y golpes en la puerta ---
+    t = auto("event_steps", 75.0)
+    x_start, x_end = hall["x1"] - 25.0, door_cx + 10.0
+    steps = 7
+    for i in range(steps):
+        x = x_start + (x_end - x_start) * i / float(steps - 1)
+        y = hall_y + (8.0 if i % 2 else -8.0)
+        t.add_step(action("PlaySound"), None, 0.75 * i, sfx("footstep_wood_%02d" % (i % 4 + 1)), at(t, x, y, 5.0), False)
+    t.add_step(action("PlaySound"), None, 0.75 * steps + 2.2, sfx("door_knock"), at(t, door_cx, -HY - T - 12.0, 120.0), False)
+
+    # --- El sillon se gira hacia la puerta mientras no miras ---
+    chair = out.get("armchair")
+    if chair:
+        t = trigger("event_chair", (door_cx - 20.0, -HY + 80.0, 100.0), (90.0, 70.0, 100.0), min_game_time=100.0)
+        turn = unreal.Transform(location=V(0, 0, 0), rotation=R(yaw=-38.0), scale=V(1, 1, 1))
+        t.add_step(action("MoveActor"), chair.actor, 0.5, None, turn, True)
+        t.add_step(action("PlaySound"), chair.actor, 0.5, sfx("creak_wood_01"), identity, True)
+
+    # --- Respiracion en la nuca junto al televisor ---
+    stand = out.get("tv_stand")
+    if stand:
+        t = trigger("event_breath", (stand.x - 90.0, stand.y, 100.0), (60.0, 90.0, 100.0), min_game_time=120.0, chance=0.8)
+        t.add_step(action("SoundBehindPlayer"), None, 0.4, sfx("breath"), unreal.Transform(location=V(65, 0, 0)), False)
+        if lamp:
+            t.add_step(action("LampFlicker"), lamp, 1.6, None, identity, False)
+
+    # --- Telefono ---
+    phone = out.get("telephone")
+    if phone:
+        hidden = (0.0, 0.0, -2000.0)
+        answer = trigger("event_phone_answer", hidden, (10.0, 10.0, 10.0), fire_on_overlap=False)
+        if out.get("clock_tick"):
+            answer.add_step(action("AudioStop"), out["clock_tick"], 2.0, None, identity, False)
+        if tv:
+            answer.add_step(action("TVOn"), tv, 6.5, None, identity, False)
+        if lamp:
+            answer.add_step(action("LampFlicker"), lamp, 9.0, None, identity, False)
+            answer.add_step(action("LampOff"), lamp, 11.0, None, identity, False)
+            answer.add_step(action("LampOn"), lamp, 14.0, None, identity, False)
+        bear = out.get("toy_bear")
+        if bear:
+            loc = bear.actor.get_actor_location()
+            target = V(door_cx - 10.0, -HY + 55.0, 1.0)
+            # Del sillon al suelo, delante de la puerta (la base pasa de bear.z a 1 cm del suelo).
+            move = unreal.Transform(location=V(target.x - loc.x, target.y - loc.y, 1.0 - bear.z), rotation=R(), scale=V(1, 1, 1))
+            answer.add_step(action("MoveActor"), bear.actor, 12.5, None, move, False)
+
+        missed = trigger("event_phone_missed", hidden, (10.0, 10.0, 10.0), fire_on_overlap=False)
+        missed.add_step(action("DoorSlam"), door, 1.0, None, identity, False)
+        phone.actor.set_events(answer, missed)
+
+        t = auto("event_phone_ring", 150.0)
+        t.add_step(action("PhoneRing"), phone.actor, 0.0, None, identity, False)
+
+    # --- Campanadas y el reloj se para ---
+    clock = out.get("grandfather_clock")
+    if clock:
+        t = auto("event_chime", 210.0)
+        t.add_step(action("PlaySound"), clock.actor, 0.0, sfx("clock_chime"), unreal.Transform(location=V(0, 0, 170)), False)
+        if out.get("clock_tick"):
+            t.add_step(action("AudioStop"), out["clock_tick"], 6.5, None, identity, False)
 
 
 # --------------------------------------------------------------------------------------

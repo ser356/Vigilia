@@ -3,6 +3,8 @@
 #include "VGTelevision.h"
 #include "VGDoor.h"
 #include "VGStatics.h"
+#include "VGPhone.h"
+#include "Components/AudioComponent.h"
 #include "Components/BoxComponent.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
@@ -24,6 +26,38 @@ void AVGEventTrigger::BeginPlay()
 {
 	Super::BeginPlay();
 	Box->OnComponentBeginOverlap.AddDynamic(this, &AVGEventTrigger::HandleOverlap);
+	if (AutoFireAfter >= 0.f)
+	{
+		FTimerHandle Handle;
+		GetWorldTimerManager().SetTimer(Handle, this, &AVGEventTrigger::TryAutoFire, FMath::Max(AutoFireAfter, 0.1f), false);
+	}
+}
+
+bool AVGEventTrigger::IsPlayerInside() const
+{
+	const APawn* Pawn = UGameplayStatics::GetPlayerPawn(this, 0);
+	if (!Pawn)
+	{
+		return false;
+	}
+	const FVector Local = Box->GetComponentTransform().InverseTransformPosition(Pawn->GetActorLocation());
+	const FVector Extent = Box->GetUnscaledBoxExtent();
+	return FMath::Abs(Local.X) <= Extent.X && FMath::Abs(Local.Y) <= Extent.Y && FMath::Abs(Local.Z) <= Extent.Z + 100.f;
+}
+
+void AVGEventTrigger::TryAutoFire()
+{
+	if (bOnce && bFired)
+	{
+		return;
+	}
+	if (bRequirePlayerInside && !IsPlayerInside())
+	{
+		FTimerHandle Handle;
+		GetWorldTimerManager().SetTimer(Handle, this, &AVGEventTrigger::TryAutoFire, 4.f, false);
+		return;
+	}
+	Fire();
 }
 
 void AVGEventTrigger::AddStep(EVGEventAction Action, AActor* Target, float Delay, USoundBase* Sound, FTransform Offset, bool bOnlyWhenUnseen)
@@ -47,7 +81,7 @@ void AVGEventTrigger::SetBoxExtent(FVector Extent)
 void AVGEventTrigger::HandleOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	const APawn* Pawn = Cast<APawn>(OtherActor);
-	if (!Pawn || !Pawn->IsPlayerControlled())
+	if (!bFireOnOverlap || !Pawn || !Pawn->IsPlayerControlled())
 	{
 		return;
 	}
@@ -170,6 +204,49 @@ void AVGEventTrigger::ExecuteStep(int32 Index)
 		if (Target)
 		{
 			Target->SetActorHiddenInGame(!Target->IsHidden());
+		}
+		break;
+	case EVGEventAction::AudioPlay:
+	case EVGEventAction::AudioStop:
+		if (Target)
+		{
+			if (UAudioComponent* AudioComp = Target->FindComponentByClass<UAudioComponent>())
+			{
+				if (Step.Action == EVGEventAction::AudioPlay)
+				{
+					AudioComp->FadeIn(0.3f);
+				}
+				else
+				{
+					AudioComp->FadeOut(0.15f, 0.f);
+				}
+			}
+		}
+		break;
+	case EVGEventAction::SoundBehindPlayer:
+		if (Step.Sound)
+		{
+			if (const APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
+			{
+				FVector ViewLocation;
+				FRotator ViewRotation;
+				PC->GetPlayerViewPoint(ViewLocation, ViewRotation);
+				const float Distance = Step.Offset.GetLocation().X > 1.f ? static_cast<float>(Step.Offset.GetLocation().X) : 70.f;
+				const FVector Behind = ViewLocation - FRotator(0.f, ViewRotation.Yaw, 0.f).Vector() * Distance + FVector(0.f, 0.f, 8.f);
+				UVGStatics::PlaySpatialSound(this, Step.Sound, Behind, 0.9f, 1.f);
+			}
+		}
+		break;
+	case EVGEventAction::PhoneRing:
+		if (AVGPhone* Phone = Cast<AVGPhone>(Target))
+		{
+			Phone->Ring();
+		}
+		break;
+	case EVGEventAction::FireTrigger:
+		if (AVGEventTrigger* Other = Cast<AVGEventTrigger>(Target))
+		{
+			Other->Fire();
 		}
 		break;
 	}

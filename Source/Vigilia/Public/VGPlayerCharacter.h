@@ -42,6 +42,10 @@ public:
 	UFUNCTION(Exec, BlueprintCallable, Category = "Vigilia|Settings")
 	void VGSetSensitivity(float NewSensitivity);
 
+	/** Consola: VGQuality 0..3 (bajo, medio, alto, epico). Se guarda para la proxima partida. */
+	UFUNCTION(Exec, BlueprintCallable, Category = "Vigilia|Settings")
+	void VGQuality(int32 Level);
+
 	/** Consola: VGInvertY 1 */
 	UFUNCTION(Exec, BlueprintCallable, Category = "Vigilia|Settings")
 	void VGInvertY(bool bInvert);

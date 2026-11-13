@@ -23,7 +23,16 @@ enum class EVGEventAction : uint8
 	PlaySound,
 	/** Aplica Offset (posicion relativa + rotacion) al Target. */
 	MoveActor,
-	ToggleVisibility
+	ToggleVisibility,
+	/** Arranca / para el audio del Target (p. ej. el tic-tac del reloj de pie). */
+	AudioPlay,
+	AudioStop,
+	/** Reproduce Sound justo detras de la cabeza del jugador. Offset.X = distancia (cm, por defecto 70). */
+	SoundBehindPlayer,
+	/** Hace sonar un AVGPhone. */
+	PhoneRing,
+	/** Dispara otro AVGEventTrigger (para encadenar secuencias). */
+	FireTrigger
 };
 
 USTRUCT(BlueprintType)
@@ -91,6 +100,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Events")
 	float MinGameTime = 0.f;
 
+	/** Si es >= 0, se dispara solo a los N segundos de partida (sin necesidad de pisar el volumen). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Events")
+	float AutoFireAfter = -1.f;
+
+	/** Con AutoFireAfter: espera a que el jugador este dentro del volumen (reintenta cada 4 s). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Events")
+	bool bRequirePlayerInside = false;
+
+	/** Si es false, pisar el volumen no lo dispara (solo AutoFire o Fire()). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Events")
+	bool bFireOnOverlap = true;
+
 	/** Numero de entradas al volumen necesarias antes de poder dispararse. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Events")
 	int32 RequiredEntries = 1;
@@ -103,6 +124,8 @@ private:
 	void HandleOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
 	void ExecuteStep(int32 Index);
+	void TryAutoFire();
+	bool IsPlayerInside() const;
 	bool IsSeenByPlayer(const AActor* Target) const;
 
 	bool bFired = false;
