@@ -36,6 +36,18 @@ def sfx(name):
     return eal.load_asset(path) if eal.does_asset_exist(path) else None
 
 
+def set_bool(obj, name, value):
+    """Propiedades bool de C++ (bOn) se exponen en Python sin la b ('on'); se prueban ambas formas."""
+    for prop in (name, "b_" + name):
+        try:
+            obj.set_editor_property(prop, value)
+            return True
+        except Exception:  # noqa: BLE001
+            continue
+    warn("No se pudo fijar %s.%s" % (type(obj).__name__, name))
+    return False
+
+
 def mark(actor, key, folder, auto=None):
     tags = [TAG]
     if key:
@@ -252,9 +264,27 @@ def fit_rotation(mesh, target_size):
 def import_local_sources():
     audio_dir = os.path.join(SOURCE_DIR, "Audio")
     wavs = [os.path.join(audio_dir, f) for f in sorted(os.listdir(audio_dir)) if f.endswith(".wav")] if os.path.isdir(audio_dir) else []
-    missing = [w for w in wavs if not eal.does_asset_exist("%s/%s" % (SFX_DIR, os.path.splitext(os.path.basename(w))[0]))]
+    # Reimporta los WAV nuevos o modificados (p. ej. tras Tools/fetch_sounds.py), comparando un hash.
+    import hashlib
+    import json as _json
+    hash_path = os.path.join(PROJECT_DIR, "Saved", "Vigilia", "audio_hashes.json")
+    known = {}
+    if os.path.exists(hash_path):
+        with open(hash_path, encoding="utf-8") as fh:
+            known = _json.load(fh)
+    current = {}
+    for w in wavs:
+        with open(w, "rb") as fh:
+            current[os.path.basename(w)] = hashlib.md5(fh.read()).hexdigest()
+    missing = [w for w in wavs
+               if not eal.does_asset_exist("%s/%s" % (SFX_DIR, os.path.splitext(os.path.basename(w))[0]))
+               or known.get(os.path.basename(w)) != current[os.path.basename(w)]]
     if missing:
+        log("Importando %d sonidos nuevos o modificados" % len(missing))
         import_files(missing, SFX_DIR)
+    os.makedirs(os.path.dirname(hash_path), exist_ok=True)
+    with open(hash_path, "w", encoding="utf-8") as fh:
+        _json.dump(current, fh, indent=1)
     for data in assets_under(SFX_DIR, ("SoundWave",)):
         if str(data.asset_name).endswith("_loop"):
             wave = data.get_asset()
@@ -553,9 +583,12 @@ def setup_television(tv, prep, mats):
                     ML.make_rot_from_x(fwd), sw, sh)
     safe_set(tv, "power_sound", sfx("tv_power"))
     safe_set(tv, "static_loop_sound", sfx("tv_static_loop"))
+    # Encendida desde el principio: la nieve es la luz principal del salon.
+    set_bool(tv, "on", True)
+    safe_set(tv, "glow_lumens", 200.0)
 
 
-def setup_lamp(lamp, prep, lumens=150.0):
+def setup_lamp(lamp, prep, lumens=80.0):
     g = prep.group
     top = g.centroid(0.2) or [0.0, 0.0]
     local = V(g.center[0] + top[0] * g.size[0], g.center[1] + top[1] * g.size[1], g.min[2] + g.size[2] * 0.86)
@@ -570,6 +603,8 @@ def setup_lamp(lamp, prep, lumens=150.0):
     safe_set(light, "source_radius", 6.0)
     safe_set(light, "soft_source_radius", 18.0)
     safe_set(lamp, "switch_sound", sfx("switch_click"))
+    # Empieza apagada: la luz principal es la tele (se enciende con el interruptor o por eventos).
+    set_bool(lamp, "on", False)
 
 
 def furnish(res, mats, info, photos):
@@ -973,9 +1008,9 @@ def build_gameplay(out, door, info, mats):
     if tv:
         t = trigger("event_tv", (table.x if table else -60.0, -10.0, 100.0), (110.0, 150.0, 100.0),
                     required_entries=2, min_game_time=45.0)
-        t.add_step(action("TVOn"), tv, 1.2, None, identity, False)
-        if lamp:
-            t.add_step(action("LampFlicker"), lamp, 1.5, None, identity, False)
+        # La tele se apaga sola: oscuridad total unos segundos y vuelve la nieve.
+        t.add_step(action("TVOff"), tv, 1.2, None, identity, False)
+        t.add_step(action("TVOn"), tv, 5.5, None, identity, False)
 
     # 2) Junto a la ventana: golpes en la tuberia, la puerta se entreabre y un cuadro se tuerce
     #    (solo si no lo estas mirando).
@@ -997,8 +1032,11 @@ def build_gameplay(out, door, info, mats):
     hall = info["hall"]
     t = trigger("event_hall", ((hall["x0"] + hall["x1"]) * 0.5 - 60.0, (hall["y0"] + hall["y1"]) * 0.5, 100.0),
                 (70.0, 60.0, 100.0), min_game_time=30.0)
+    # Al salir al pasillo: la lampara se enciende sola a tu espalda y la tele se apaga.
     if lamp:
-        t.add_step(action("LampOff"), lamp, 0.6, None, identity, False)
+        t.add_step(action("LampOn"), lamp, 0.6, None, identity, True)
+    if tv:
+        t.add_step(action("TVOff"), tv, 0.6, None, identity, True)
     t.add_step(action("PlaySound"), None, 2.4, sfx("creak_wood_02"), unreal.Transform(location=V(-260, 180, 0)), False)
 
     build_scripted_events(out, door, info, lamp, tv)
@@ -1015,9 +1053,9 @@ def build_scripted_events(out, door, info, lamp, tv):
 
     ~75 s   Pasos en el pasillo que se acercan, se detienen junto a la puerta y tres golpes. Silencio.
     ~100 s+ Al volver junto a la puerta, el sillon se ha girado hacia ella (si no lo miras).
-    ~120 s+ Junto al televisor: alguien respira detras de ti; la lampara parpadea.
+    ~120 s+ Junto al televisor: alguien respira detras de ti y la tele se corta un instante.
     ~150 s  Suena el telefono. Si contestas: respiracion y murmullo, el reloj se para, la tele se
-            enciende sola, apagon de 3 s y, al volver la luz, el oso esta frente a la puerta.
+            apaga (oscuridad total 5 s) y, al volver la imagen, el oso esta frente a la puerta.
             Si no contestas: deja de sonar y la puerta se cierra de golpe.
     ~210 s  El reloj da tres campanadas y deja de hacer tic-tac.
     """
@@ -1055,8 +1093,9 @@ def build_scripted_events(out, door, info, lamp, tv):
     if stand:
         t = trigger("event_breath", (stand.x - 90.0, stand.y, 100.0), (60.0, 90.0, 100.0), min_game_time=120.0, chance=0.8)
         t.add_step(action("SoundBehindPlayer"), None, 0.4, sfx("breath"), unreal.Transform(location=V(65, 0, 0)), False)
-        if lamp:
-            t.add_step(action("LampFlicker"), lamp, 1.6, None, identity, False)
+        if tv:
+            t.add_step(action("TVOff"), tv, 1.6, None, identity, False)
+            t.add_step(action("TVOn"), tv, 2.3, None, identity, False)
 
     # --- Telefono ---
     phone = out.get("telephone")
@@ -1065,19 +1104,19 @@ def build_scripted_events(out, door, info, lamp, tv):
         answer = trigger("event_phone_answer", hidden, (10.0, 10.0, 10.0), fire_on_overlap=False)
         if out.get("clock_tick"):
             answer.add_step(action("AudioStop"), out["clock_tick"], 2.0, None, identity, False)
+        # Mientras escuchas: la tele se apaga, apagon total y al volver la imagen el oso ya no esta donde estaba.
         if tv:
-            answer.add_step(action("TVOn"), tv, 6.5, None, identity, False)
+            answer.add_step(action("TVOff"), tv, 9.0, None, identity, False)
+            answer.add_step(action("TVOn"), tv, 14.0, None, identity, False)
         if lamp:
-            answer.add_step(action("LampFlicker"), lamp, 9.0, None, identity, False)
-            answer.add_step(action("LampOff"), lamp, 11.0, None, identity, False)
-            answer.add_step(action("LampOn"), lamp, 14.0, None, identity, False)
+            answer.add_step(action("LampOff"), lamp, 9.0, None, identity, False)
         bear = out.get("toy_bear")
         if bear:
             loc = bear.actor.get_actor_location()
             target = V(door_cx - 10.0, -HY + 55.0, 1.0)
             # Del sillon al suelo, delante de la puerta (la base pasa de bear.z a 1 cm del suelo).
             move = unreal.Transform(location=V(target.x - loc.x, target.y - loc.y, 1.0 - bear.z), rotation=R(), scale=V(1, 1, 1))
-            answer.add_step(action("MoveActor"), bear.actor, 12.5, None, move, False)
+            answer.add_step(action("MoveActor"), bear.actor, 11.5, None, move, False)
 
         missed = trigger("event_phone_missed", hidden, (10.0, 10.0, 10.0), fire_on_overlap=False)
         missed.add_step(action("DoorSlam"), door, 1.0, None, identity, False)
