@@ -1,0 +1,157 @@
+{
+ "_rechazados": {
+  "object_pickup": [
+   646673
+  ],
+  "object_putdown": [
+   323725
+  ]
+ },
+ "breath": {
+  "id": 277043,
+  "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+  "name": "sigh.mp3",
+  "url": "https://freesound.org/people/lazemaze/sounds/277043/",
+  "user": "lazemaze"
+ },
+ "clock_chime": {
+  "id": 234268,
+  "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+  "name": "Old Clock Chimes.wav",
+  "url": "https://freesound.org/people/NightVoice/sounds/234268/",
+  "user": "NightVoice"
+ },
+ "clock_tick_loop": {
+  "id": 264065,
+  "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+  "name": "Ticking Clock (Created for a trailer to create tension) ",
+  "url": "https://freesound.org/people/Paul368/sounds/264065/",
+  "user": "Paul368"
+ },
+ "creak_wood_01": {
+  "id": 795898,
+  "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+  "name": "Fall/Landing on creaking wooden floor",
+  "url": "https://freesound.org/people/Squirrel_404/sounds/795898/",
+  "user": "Squirrel_404"
+ },
+ "creak_wood_02": {
+  "id": 119837,
+  "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+  "name": "Floorboard_creak.aif",
+  "url": "https://freesound.org/people/kbnevel/sounds/119837/",
+  "user": "kbnevel"
+ },
+ "distant_thump": {
+  "id": 209012,
+  "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+  "name": "Fruit Impact 1",
+  "url": "https://freesound.org/people/OwlStorm/sounds/209012/",
+  "user": "OwlStorm"
+ },
+ "door_close": {
+  "id": 126041,
+  "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+  "name": "Gate Latch",
+  "url": "https://freesound.org/people/mhtaylor67/sounds/126041/",
+  "user": "mhtaylor67"
+ },
+ "door_knock": {
+  "id": 553297,
+  "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+  "name": "Knock on Door/Wood | Knocking 3 Times on Wood.mp3",
+  "url": "https://freesound.org/people/sukondi/sounds/553297/",
+  "user": "sukondi"
+ },
+ "door_locked": {
+  "id": 216875,
+  "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+  "name": "Locked doorknob rattle 3.wav",
+  "url": "https://freesound.org/people/CastIronCarousel/sounds/216875/",
+  "user": "CastIronCarousel"
+ },
+ "door_open_creak": {
+  "id": 590950,
+  "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+  "name": "Creaky Door Closing Slowly",
+  "url": "https://freesound.org/people/Rudmer_Rotteveel/sounds/590950/",
+  "user": "Rudmer_Rotteveel"
+ },
+ "door_slam": {
+  "id": 637482,
+  "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+  "name": "door wood apartment interior open close fast slam.flac",
+  "url": "https://freesound.org/people/kyles/sounds/637482/",
+  "user": "kyles"
+ },
+ "footsteps": {
+  "id": 403600,
+  "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+  "name": "Human_Steps_Barefoot_Wood.wav",
+  "url": "https://freesound.org/people/LamaMakesMusic/sounds/403600/",
+  "user": "LamaMakesMusic"
+ },
+ "object_pickup": {
+  "id": 494789,
+  "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+  "name": "Jacket/Cloth Rustle 3",
+  "url": "https://freesound.org/people/brandondelehoy/sounds/494789/",
+  "user": "brandondelehoy"
+ },
+ "object_putdown": {
+  "id": 369710,
+  "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+  "name": "Wood Knock",
+  "url": "https://freesound.org/people/Mrguff/sounds/369710/",
+  "user": "Mrguff"
+ },
+ "phone_ring_loop": {
+  "id": 332073,
+  "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+  "name": "Telephone Ring (old German W48)",
+  "url": "https://freesound.org/people/meisterleise/sounds/332073/",
+  "user": "meisterleise"
+ },
+ "phone_voice": {
+  "id": 554906,
+  "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+  "name": "Male_Breath_Scared_Frozen_Loop_Stereo.wav",
+  "url": "https://freesound.org/people/Nox_Sound/sounds/554906/",
+  "user": "Nox_Sound"
+ },
+ "pipe_knock": {
+  "id": 164572,
+  "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+  "name": "Metal pipe on concrete.wav",
+  "url": "https://freesound.org/people/deleted_user_2104797/sounds/164572/",
+  "user": "deleted_user_2104797"
+ },
+ "room_tone_loop": {
+  "id": 697579,
+  "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+  "name": "1800's Church Room Tone",
+  "url": "https://freesound.org/people/composingatnight/sounds/697579/",
+  "user": "composingatnight"
+ },
+ "switch_click": {
+  "id": 348221,
+  "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+  "name": "Switch Light 02.wav",
+  "url": "https://freesound.org/people/tbrook/sounds/348221/",
+  "user": "tbrook"
+ },
+ "tv_power": {
+  "id": 693859,
+  "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+  "name": "On/Off Button",
+  "url": "https://freesound.org/people/Fission9/sounds/693859/",
+  "user": "Fission9"
+ },
+ "tv_static_loop": {
+  "id": 546047,
+  "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+  "name": "Analog CRT TV Electronic Static Noise",
+  "url": "https://freesound.org/people/grcekh/sounds/546047/",
+  "user": "grcekh"
+ }
+}

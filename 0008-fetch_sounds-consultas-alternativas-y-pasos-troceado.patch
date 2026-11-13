@@ -1,0 +1,190 @@
+From 0b9b734454ac6d1e1daca91c07c54c5a197005ff Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Fri, 13 Nov 2026 14:30:02 +0000
+Subject: [PATCH] fetch_sounds: consultas alternativas y pasos troceados de una
+ grabacion real
+
+La busqueda de Freesound exige todas las palabras; ahora se prueban consultas cortas en
+orden. Los pasos se obtienen de una grabacion de alguien andando sobre madera, troceada
+en pisadas sueltas por deteccion de picos (antes salian crujidos sueltos).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01FSNh57Q72v7GgUik5hM21o
+---
+ Tools/fetch_sounds.py | 125 ++++++++++++++++++++++++++++++------------
+ 1 file changed, 89 insertions(+), 36 deletions(-)
+
+diff --git a/Tools/fetch_sounds.py b/Tools/fetch_sounds.py
+index 8045b34..c94bb40 100755
+--- a/Tools/fetch_sounds.py
++++ b/Tools/fetch_sounds.py
+@@ -36,37 +36,45 @@ AUDIO = os.path.join(ROOT, "SourceAssets", "Audio")
+ CHOICES = os.path.join(ROOT, "Scripts", "sound_choices.json")
+ API = "https://freesound.org/apiv2/search/text/"
+ 
+-# nombre: (consulta, duracion minima, duracion maxima)
++# nombre: (consultas alternativas, duracion minima, duracion maxima)
++# La busqueda de Freesound exige todas las palabras: consultas cortas primero falla menos.
+ SOUNDS = {
+-    "room_tone_loop": ("room tone quiet house night", 20, 120),
+-    "tv_static_loop": ("tv static noise crt", 6, 60),
+-    "tv_power": ("crt television turn on", 0.4, 5),
+-    "switch_click": ("light switch click", 0.1, 1.5),
+-    "door_open_creak": ("wooden door creak open slow", 1.0, 6),
+-    "door_close": ("wooden door close latch", 0.3, 3),
+-    "door_slam": ("door slam interior", 0.4, 3),
+-    "door_locked": ("locked door handle rattle", 0.5, 3),
+-    "footstep_wood_01": ("footstep wooden floor single", 0.15, 1.2),
+-    "footstep_wood_02": ("footstep wooden floor single", 0.15, 1.2),
+-    "footstep_wood_03": ("footstep wooden floor single", 0.15, 1.2),
+-    "footstep_wood_04": ("footstep wooden floor single", 0.15, 1.2),
+-    "clock_tick_loop": ("grandfather clock ticking", 4, 40),
+-    "clock_chime": ("grandfather clock chime", 3, 25),
+-    "creak_wood_01": ("wood floor creak", 0.5, 4),
+-    "creak_wood_02": ("old house creak", 0.5, 5),
+-    "distant_thump": ("distant thud house", 0.4, 4),
+-    "pipe_knock": ("water pipe knock", 0.5, 6),
+-    "object_pickup": ("pick up small object foley", 0.2, 2),
+-    "object_putdown": ("put down object on wooden table", 0.2, 2),
+-    "door_knock": ("knocking on wooden door", 1.0, 6),
+-    "phone_ring_loop": ("old telephone ringing bell", 2, 15),
+-    "phone_voice": ("breathing on the phone", 4, 25),
+-    "breath": ("breath exhale close", 0.8, 4),
++    "room_tone_loop": (["room tone", "interior ambience quiet", "house ambience night"], 15, 180),
++    "tv_static_loop": (["tv static", "white noise static"], 6, 60),
++    "tv_power": (["crt tv on", "television turn on", "power on button"], 0.4, 5),
++    "switch_click": (["light switch", "switch click"], 0.1, 1.5),
++    "door_open_creak": (["door creak", "creaky door"], 1.0, 6),
++    "door_close": (["door close", "door latch"], 0.3, 3),
++    "door_slam": (["door slam"], 0.4, 3),
++    "door_locked": (["locked door", "door handle rattle"], 0.5, 3),
++    "clock_tick_loop": (["clock ticking", "clock tick"], 4, 40),
++    "clock_chime": (["grandfather clock", "clock chime"], 3, 25),
++    "creak_wood_01": (["floor creak", "wood creak"], 0.5, 4),
++    "creak_wood_02": (["floorboard creak", "wooden floor creak", "creak"], 0.5, 5),
++    "distant_thump": (["thud", "thump", "bang"], 0.4, 4),
++    "pipe_knock": (["pipe knock", "radiator knock", "pipes", "knock metal"], 0.5, 8),
++    "object_pickup": (["pick up", "picking up", "grab object"], 0.2, 2),
++    "object_putdown": (["put down", "set down", "object drop"], 0.2, 2),
++    "door_knock": (["door knock", "knocking", "knock"], 0.8, 8),
++    "phone_ring_loop": (["telephone ring", "phone ring"], 2, 15),
++    "phone_voice": (["heavy breathing", "breathing", "whisper"], 4, 30),
++    "breath": (["breath", "exhale"], 0.8, 4),
+ }
+ 
++# Pasos: una grabacion de alguien andando sobre madera, troceada automaticamente en pisadas sueltas.
++FOOTSTEPS = (["footsteps wood", "footsteps wooden floor", "walking wood", "footsteps"], 3, 40)
++
+ HEADERS = {"User-Agent": "vigilia-sound-fetch/1.0"}
+ 
+ 
++def search_any(key, queries, dmin, dmax, exclude=()):
++    for query in queries:
++        results = [r for r in api_search(key, query, dmin, dmax) if r["id"] not in exclude]
++        if results:
++            return query, results
++    return None, []
++
++
+ def api_search(key, query, dmin, dmax, page_size=15):
+     params = {
+         "query": query,
+@@ -122,6 +130,38 @@ def smooth_loop(path, fade_seconds=0.6):
+         fh.writeframes(body.tobytes())
+ 
+ 
++def slice_steps(path, out_paths, step_len=0.38):
++    """Detecta pisadas (picos de energia separados >= 0,3 s) y guarda las mas limpias por separado."""
++    with wave.open(path, "rb") as fh:
++        params = fh.getparams()
++        data = array("h", fh.readframes(fh.getnframes()))
++    rate = params.framerate
++    win = int(0.01 * rate)
++    energy = [sum(abs(v) for v in data[i:i + win]) / float(win) for i in range(0, len(data) - win, win)]
++    if not energy:
++        return 0
++    threshold = max(energy) * 0.35
++    peaks, last = [], -999
++    for i in range(1, len(energy) - 1):
++        if energy[i] >= threshold and energy[i] >= energy[i - 1] and energy[i] >= energy[i + 1] and i - last >= 30:
++            peaks.append(i)
++            last = i
++    # Las pisadas mas fuertes suelen ser las mas limpias; se conservan en orden temporal.
++    peaks = sorted(sorted(peaks, key=lambda i: energy[i], reverse=True)[:len(out_paths)])
++    length = int(step_len * rate)
++    for path_out, peak in zip(out_paths, peaks):
++        start = max(0, peak * win - int(0.02 * rate))
++        chunk = data[start:start + length]
++        fade = int(0.06 * rate)
++        for j in range(min(fade, len(chunk))):
++            chunk[len(chunk) - 1 - j] = int(chunk[len(chunk) - 1 - j] * j / float(fade))
++        with wave.open(path_out, "wb") as fh:
++            fh.setparams(params)
++            fh.writeframes(chunk.tobytes())
++        normalize(path_out, 0.8)
++    return len(peaks)
++
++
+ def normalize(path, peak=0.85):
+     with wave.open(path, "rb") as fh:
+         params = fh.getparams()
+@@ -157,20 +197,25 @@ def main():
+     used_ids = {c["id"] for c in choices.values()}
+     credits = []
+     tmpdir = tempfile.mkdtemp(prefix="vigilia_sfx_")
+-    names = args.only or list(SOUNDS)
++    # Pasos individuales de una version anterior del script: se descartan para trocear una grabacion real.
++    for k in ("footstep_wood_01", "footstep_wood_02", "footstep_wood_03", "footstep_wood_04"):
++        choices.pop(k, None)
++    jobs = dict(SOUNDS)
++    jobs["footsteps"] = FOOTSTEPS
++    names = args.only or list(jobs)
+     for name in names:
+-        query, dmin, dmax = SOUNDS[name]
++        queries, dmin, dmax = jobs[name]
+         chosen = choices.get(name)
+         try:
+             if chosen and name not in args.reroll:
+                 sound = api_sound(key, chosen["id"])
+             else:
+-                results = [r for r in api_search(key, query, dmin, dmax)
+-                           if r["id"] not in used_ids or (chosen and r["id"] == chosen["id"])]
++                exclude = used_ids - ({chosen["id"]} if chosen else set())
+                 if chosen and name in args.reroll:
+-                    results = [r for r in results if r["id"] != chosen["id"]] or results
++                    exclude = exclude | {chosen["id"]}
++                query, results = search_any(key, queries, dmin, dmax, exclude)
+                 if not results:
+-                    print("[%s] sin resultados CC0 para '%s'; se mantiene el actual" % (name, query))
++                    print("[%s] sin resultados CC0 (%s); se mantiene el actual" % (name, ", ".join(queries)))
+                     continue
+                 sound = sorted(results, key=score, reverse=True)[0]
+             preview = sound["previews"].get("preview-hq-mp3") or sound["previews"].get("preview-lq-mp3")
+@@ -178,11 +223,19 @@ def main():
+             req = urllib.request.Request(preview, headers=HEADERS)
+             with urllib.request.urlopen(req, timeout=120) as resp, open(src, "wb") as out:
+                 out.write(resp.read())
+-            dst = os.path.join(AUDIO, name + ".wav")
+-            convert(src, dst)
+-            normalize(dst)
+-            if name.endswith("_loop"):
+-                smooth_loop(dst)
++            if name == "footsteps":
++                full = os.path.join(tmpdir, "footsteps.wav")
++                convert(src, full)
++                outs = [os.path.join(AUDIO, "footstep_wood_%02d.wav" % i) for i in range(1, 5)]
++                found = slice_steps(full, outs)
++                if found < 4:
++                    print("[footsteps] solo %d pisadas detectadas; prueba --reroll footsteps" % found)
++            else:
++                dst = os.path.join(AUDIO, name + ".wav")
++                convert(src, dst)
++                normalize(dst)
++                if name.endswith("_loop"):
++                    smooth_loop(dst)
+             used_ids.add(sound["id"])
+             choices[name] = {"id": sound["id"], "name": sound["name"], "user": sound["username"],
+                              "url": sound["url"], "license": sound["license"]}
+-- 
+2.43.0
+
