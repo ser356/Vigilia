@@ -109,11 +109,29 @@ class Prep(object):
             lay = R(roll=90.0) if g.size[1] <= g.size[0] else R(pitch=90.0)
             rot = ML.compose_rotators(lay, rot)
         self.rotation = rot
+        self.scale = self._sanity_scale()
         self._measure()
+
+    def _sanity_scale(self):
+        """Corrige errores de unidades al importar (m/cm/pulgadas): si el objeto mide mas del doble
+        o menos de la mitad de su tamano real esperado, se escala uniformemente a ese tamano."""
+        expected = self.resolved.spec.get("size_cm")
+        if not expected:
+            return 1.0
+        biggest = max(self.group.size)
+        if biggest <= 0.01:
+            return 1.0
+        ratio = expected / biggest
+        if 0.5 <= ratio <= 2.0:
+            return 1.0
+        warn("'%s' mide %.0f cm y deberia rondar %.0f cm: se escala x%.3f (unidades del modelo)."
+             % (self.key, biggest, expected, ratio))
+        return ratio
 
     def _measure(self):
         g = self.group
-        xf = unreal.Transform(location=V(0, 0, 0), rotation=self.rotation, scale=V(1, 1, 1))
+        sc = self.scale
+        xf = unreal.Transform(location=V(0, 0, 0), rotation=self.rotation, scale=V(sc, sc, sc))
         xs, ys, zs = [], [], []
         for cx in (g.min[0], g.max[0]):
             for cy in (g.min[1], g.max[1]):
@@ -153,9 +171,13 @@ class Prep(object):
         else:
             actor = actor_sub.spawn_actor_from_class(cls, V(*loc), rot)
             actor.setup_mesh(main_mesh, V(0, 0, 0), R())
+        if self.scale != 1.0:
+            actor.set_actor_scale3d(V(self.scale, self.scale, self.scale))
         mark(actor, self.key, folder, auto)
         for index, mesh in enumerate(extras):
             part = actor_sub.spawn_actor_from_object(mesh, V(*loc), rot)
+            if self.scale != 1.0:
+                part.set_actor_scale3d(V(self.scale, self.scale, self.scale))
             if movable or cls is not None:
                 part.static_mesh_component.set_mobility(unreal.ComponentMobility.MOVABLE)
             mark(part, None, folder)
@@ -518,7 +540,7 @@ def setup_television(tv, prep, mats):
     safe_set(tv, "static_loop_sound", sfx("tv_static_loop"))
 
 
-def setup_lamp(lamp, prep, lumens=380.0):
+def setup_lamp(lamp, prep, lumens=260.0):
     g = prep.group
     top = g.centroid(0.2) or [0.0, 0.0]
     local = V(g.center[0] + top[0] * g.size[0], g.center[1] + top[1] * g.size[1], g.min[2] + g.size[2] * 0.86)

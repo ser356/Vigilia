@@ -275,26 +275,30 @@ def resolve_all(manifest):
 
     result = {}
     # 1) Fab: de titulo mas largo a mas corto para que "Wooden Table With Drawer" no caiga en "Wooden Table".
-    fab_entries = []
-    for group, name, spec in entries:
-        for src in spec["sources"]:
-            if src["type"] == "fab":
-                fab_entries.append((len(norm(src["title"])), group, name, spec, src))
-    for _len, group, name, spec, src in sorted(fab_entries, key=lambda e: -e[0]):
-        if name in result:
-            continue
+    def try_fab(group, name, spec, src):
         found = _fab_lookup(src["title"])
         if not found:
-            continue
+            return None
         folder, datas = found
         meshes = [d for d in datas if class_name(d) == "StaticMesh"]
         textures = [d for d in datas if class_name(d) == "Texture2D"]
         materials = [d for d in datas if class_name(d) in ("MaterialInstanceConstant", "Material")]
         if group == "slots" and not meshes:
-            continue
+            return None
         if group == "surfaces" and not textures:
-            continue
-        result[name] = Resolved(name, spec, src, meshes, textures, materials, folder)
+            return None
+        return Resolved(name, spec, src, meshes, textures, materials, folder)
+
+    # Solo los huecos cuya primera opcion es Fab; el resto respeta el orden del manifiesto en el paso 2.
+    fab_entries = []
+    for group, name, spec in entries:
+        first = spec["sources"][0]
+        if first["type"] == "fab":
+            fab_entries.append((len(norm(first["title"])), group, name, spec, first))
+    for _len, group, name, spec, src in sorted(fab_entries, key=lambda e: -e[0]):
+        found = try_fab(group, name, spec, src)
+        if found:
+            result[name] = found
 
     # 2) Respaldo Poly Haven.
     for group, name, spec in entries:
@@ -302,7 +306,13 @@ def resolve_all(manifest):
             continue
         result[name] = None
         for src in spec["sources"]:
-            if src["type"] == "polyhaven":
+            if src["type"] == "fab":
+                if src is not spec["sources"][0]:
+                    found = try_fab(group, name, spec, src)
+                    if found:
+                        result[name] = found
+                        break
+            elif src["type"] == "polyhaven":
                 folder = _polyhaven_folder(src["type"], spec.get("category", "Misc"), src["id"])
                 if _import_polyhaven_model(src["id"], folder):
                     result[name] = Resolved(name, spec, src, assets_under(folder, ("StaticMesh",)),

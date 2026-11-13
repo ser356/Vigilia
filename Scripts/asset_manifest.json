@@ -24,7 +24,8 @@
    "collision": "ndop",
    "max_tex": 2048,
    "front": "seat",
-   "required": true
+   "required": true,
+   "size_cm": 200
   },
   "armchair": {
    "category": "Furniture/Seating",
@@ -48,7 +49,8 @@
    ],
    "collision": "ndop",
    "max_tex": 2048,
-   "front": "seat"
+   "front": "seat",
+   "size_cm": 100
   },
   "coffee_table": {
    "category": "Furniture/Tables",
@@ -72,7 +74,8 @@
    ],
    "collision": "box",
    "max_tex": 2048,
-   "required": true
+   "required": true,
+   "size_cm": 80
   },
   "tv_stand": {
    "category": "Furniture/Storage",
@@ -96,7 +99,8 @@
    ],
    "collision": "box",
    "max_tex": 2048,
-   "required": true
+   "required": true,
+   "size_cm": 140
   },
   "side_table": {
    "category": "Furniture/Tables",
@@ -119,7 +123,8 @@
     }
    ],
    "collision": "box",
-   "max_tex": 1024
+   "max_tex": 1024,
+   "size_cm": 80
   },
   "floor_lamp": {
    "category": "Lighting",
@@ -143,11 +148,19 @@
    ],
    "collision": "box",
    "max_tex": 1024,
-   "required": true
+   "required": true,
+   "size_cm": 164
   },
   "television": {
    "category": "Electronics",
    "sources": [
+    {
+     "type": "polyhaven",
+     "id": "Television_01",
+     "res": "2k",
+     "url": "https://polyhaven.com/a/Television_01",
+     "license": "CC0"
+    },
     {
      "type": "fab",
      "title": "Retro CRT Television - 90s Style",
@@ -156,18 +169,12 @@
      "license": "Fab Standard License",
      "price_usd": 0.0,
      "kind": "3d-model"
-    },
-    {
-     "type": "polyhaven",
-     "id": "Television_01",
-     "res": "2k",
-     "url": "https://polyhaven.com/a/Television_01",
-     "license": "CC0"
     }
    ],
    "collision": "box",
    "max_tex": 2048,
-   "required": true
+   "required": true,
+   "size_cm": 60
   },
   "grandfather_clock": {
    "category": "Decor",
@@ -190,7 +197,8 @@
     }
    ],
    "collision": "box",
-   "max_tex": 2048
+   "max_tex": 2048,
+   "size_cm": 220
   },
   "radiator": {
    "category": "Architecture",
@@ -206,7 +214,8 @@
     }
    ],
    "collision": "box",
-   "max_tex": 1024
+   "max_tex": 1024,
+   "size_cm": 100
   },
   "door": {
    "category": "Architecture",
@@ -223,7 +232,8 @@
    ],
    "collision": "box",
    "max_tex": 2048,
-   "required": true
+   "required": true,
+   "size_cm": 243
   },
   "window": {
    "category": "Architecture",
@@ -240,7 +250,8 @@
    ],
    "collision": "box",
    "max_tex": 2048,
-   "required": true
+   "required": true,
+   "size_cm": 150
   },
   "frame_large": {
    "category": "Decor/Frames",
@@ -263,7 +274,8 @@
     }
    ],
    "collision": "none",
-   "max_tex": 1024
+   "max_tex": 1024,
+   "size_cm": 90
   },
   "frame_medium": {
    "category": "Decor/Frames",
@@ -286,7 +298,8 @@
     }
    ],
    "collision": "none",
-   "max_tex": 1024
+   "max_tex": 1024,
+   "size_cm": 70
   },
   "frame_oval": {
    "category": "Decor/Frames",
@@ -300,7 +313,8 @@
     }
    ],
    "collision": "none",
-   "max_tex": 1024
+   "max_tex": 1024,
+   "size_cm": 50
   },
   "frame_standing": {
    "category": "Decor/Frames",
@@ -314,7 +328,8 @@
     }
    ],
    "collision": "box",
-   "max_tex": 512
+   "max_tex": 512,
+   "size_cm": 27
   },
   "frame_small": {
    "category": "Decor/Frames",
@@ -337,7 +352,8 @@
     }
    ],
    "collision": "box",
-   "max_tex": 512
+   "max_tex": 512,
+   "size_cm": 23
   },
   "mantel_clock": {
    "category": "Decor",
@@ -351,7 +367,8 @@
     }
    ],
    "collision": "box",
-   "max_tex": 1024
+   "max_tex": 1024,
+   "size_cm": 34
   },
   "books": {
    "category": "Decor/Props",
@@ -374,7 +391,8 @@
     }
    ],
    "collision": "box",
-   "max_tex": 1024
+   "max_tex": 1024,
+   "size_cm": 25
   },
   "book_old": {
    "category": "Decor/Props",
@@ -390,7 +408,8 @@
     }
    ],
    "collision": "box",
-   "max_tex": 512
+   "max_tex": 512,
+   "size_cm": 25
   },
   "plant": {
    "category": "Decor",
@@ -404,7 +423,8 @@
     }
    ],
    "collision": "box",
-   "max_tex": 2048
+   "max_tex": 2048,
+   "size_cm": 85
   },
   "vase": {
    "category": "Decor/Props",
@@ -427,7 +447,8 @@
     }
    ],
    "collision": "box",
-   "max_tex": 512
+   "max_tex": 512,
+   "size_cm": 30
   },
   "ashtray": {
    "category": "Decor/Props",
@@ -443,7 +464,8 @@
     }
    ],
    "collision": "box",
-   "max_tex": 512
+   "max_tex": 512,
+   "size_cm": 15
   },
   "cushion": {
    "category": "Decor/Props",
@@ -459,7 +481,8 @@
     }
    ],
    "collision": "none",
-   "max_tex": 1024
+   "max_tex": 1024,
+   "size_cm": 50
   },
   "newspaper": {
    "category": "Decor/Props",
@@ -475,7 +498,8 @@
     }
    ],
    "collision": "none",
-   "max_tex": 512
+   "max_tex": 512,
+   "size_cm": 40
   },
   "toy_bear": {
    "category": "Decor/Props",
@@ -491,7 +515,8 @@
     }
    ],
    "collision": "box",
-   "max_tex": 512
+   "max_tex": 512,
+   "size_cm": 20
   },
   "cassette_player": {
    "category": "Electronics",
@@ -505,7 +530,8 @@
     }
    ],
    "collision": "box",
-   "max_tex": 1024
+   "max_tex": 1024,
+   "size_cm": 24
   },
   "boombox": {
    "category": "Electronics",
@@ -519,7 +545,8 @@
     }
    ],
    "collision": "box",
-   "max_tex": 2048
+   "max_tex": 2048,
+   "size_cm": 72
   },
   "telephone": {
    "category": "Electronics",
@@ -535,7 +562,8 @@
     }
    ],
    "collision": "box",
-   "max_tex": 1024
+   "max_tex": 1024,
+   "size_cm": 23
   }
  },
  "surfaces": {
