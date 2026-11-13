@@ -84,12 +84,33 @@
   "url": "https://freesound.org/people/kyles/sounds/637482/",
   "user": "kyles"
  },
+ "dread_drone_loop": {
+  "id": 386997,
+  "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+  "name": "TUNNELL.WAV",
+  "url": "https://freesound.org/people/lollosound/sounds/386997/",
+  "user": "lollosound"
+ },
+ "fluorescent_hum_loop": {
+  "id": 125064,
+  "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+  "name": "Faulty Fluorescent Light Starter & Hum.wav",
+  "url": "https://freesound.org/people/EverydaySounds/sounds/125064/",
+  "user": "EverydaySounds"
+ },
  "footsteps": {
   "id": 403600,
   "license": "http://creativecommons.org/publicdomain/zero/1.0/",
   "name": "Human_Steps_Barefoot_Wood.wav",
   "url": "https://freesound.org/people/LamaMakesMusic/sounds/403600/",
   "user": "LamaMakesMusic"
+ },
+ "fridge_hum_loop": {
+  "id": 200979,
+  "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+  "name": "Refridgerator hum.wav",
+  "url": "https://freesound.org/people/NHumphrey/sounds/200979/",
+  "user": "NHumphrey"
  },
  "object_pickup": {
   "id": 494789,
@@ -153,5 +174,19 @@
   "name": "Analog CRT TV Electronic Static Noise",
   "url": "https://freesound.org/people/grcekh/sounds/546047/",
   "user": "grcekh"
+ },
+ "water_drip_loop": {
+  "id": 464251,
+  "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+  "name": "Synthetic Cave Drips.wav",
+  "url": "https://freesound.org/people/vanszisounddesign/sounds/464251/",
+  "user": "vanszisounddesign"
+ },
+ "whisper": {
+  "id": 234044,
+  "license": "http://creativecommons.org/publicdomain/zero/1.0/",
+  "name": "Creepy Whispering",
+  "url": "https://freesound.org/people/RaspberryTickle/sounds/234044/",
+  "user": "RaspberryTickle"
  }
 }

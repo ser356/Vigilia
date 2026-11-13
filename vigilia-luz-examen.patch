@@ -1,0 +1,142 @@
+From 9bfa19a09d54de262e8a2fd3baa7751711cb029a Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Fri, 13 Nov 2026 22:18:48 +0000
+Subject: [PATCH] Examinar objetos: luz de examen suave y linterna menos
+ agresiva
+
+- Al examinar se apaga la linterna y se enciende una luz puntual suave junto a la camara,
+  con intensidad ajustada a la distancia del objeto y alcance corto; al soltar se restaura
+- Linterna de 90 a 28 lm con cono mas abierto: ya no quema las superficies cercanas
+- InspectLumens configurable en DefaultGame.ini
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01FSNh57Q72v7GgUik5hM21o
+---
+ Source/Vigilia/Private/VGPlayerCharacter.cpp | 42 ++++++++++++++++++--
+ Source/Vigilia/Public/VGPlayerCharacter.h    | 10 +++++
+ 2 files changed, 49 insertions(+), 3 deletions(-)
+
+diff --git a/Source/Vigilia/Private/VGPlayerCharacter.cpp b/Source/Vigilia/Private/VGPlayerCharacter.cpp
+index 8ff64b2..2df12f4 100644
+--- a/Source/Vigilia/Private/VGPlayerCharacter.cpp
++++ b/Source/Vigilia/Private/VGPlayerCharacter.cpp
+@@ -5,6 +5,7 @@
+ #include "Camera/CameraComponent.h"
+ #include "Components/CapsuleComponent.h"
+ #include "Components/SpotLightComponent.h"
++#include "Components/PointLightComponent.h"
+ #include "GameFramework/CharacterMovementComponent.h"
+ #include "GameFramework/PlayerController.h"
+ #include "Engine/LocalPlayer.h"
+@@ -34,14 +35,31 @@ AVGPlayerCharacter::AVGPlayerCharacter()
+ 	Flashlight->SetupAttachment(Camera);
+ 	Flashlight->SetRelativeLocation(FVector(8.f, 14.f, -12.f));
+ 	Flashlight->SetIntensityUnits(ELightUnits::Lumens);
+-	Flashlight->SetIntensity(90.f);
+-	Flashlight->SetInnerConeAngle(9.f);
+-	Flashlight->SetOuterConeAngle(24.f);
++	// Linterna vieja y debil: 90 lm quemaban cualquier superficie a menos de 1 m.
++	Flashlight->SetIntensity(28.f);
++	Flashlight->SetInnerConeAngle(12.f);
++	Flashlight->SetOuterConeAngle(30.f);
++	Flashlight->SetSourceRadius(2.f);
+ 	Flashlight->SetAttenuationRadius(1100.f);
+ 	Flashlight->bUseTemperature = true;
+ 	Flashlight->Temperature = 4300.f;
+ 	Flashlight->SetVisibility(false);
+ 
++	// Luz de examen: suave, por encima y a la izquierda de la camara, con alcance corto para que solo
++	// ilumine el objeto que tienes en la mano (no el resto de la habitacion).
++	InspectLight = CreateDefaultSubobject<UPointLightComponent>(TEXT("InspectLight"));
++	InspectLight->SetupAttachment(Camera);
++	InspectLight->SetRelativeLocation(FVector(10.f, -22.f, 26.f));
++	InspectLight->SetIntensityUnits(ELightUnits::Lumens);
++	InspectLight->SetIntensity(InspectLumens);
++	InspectLight->SetAttenuationRadius(160.f);
++	InspectLight->SetSourceRadius(12.f);
++	InspectLight->SetSoftSourceRadius(20.f);
++	InspectLight->bUseTemperature = true;
++	InspectLight->Temperature = 4600.f;
++	InspectLight->SetCastShadows(false);
++	InspectLight->SetVisibility(false);
++
+ 	Interaction = CreateDefaultSubobject<UVGInteractionComponent>(TEXT("Interaction"));
+ 
+ 	bUseControllerRotationPitch = false;
+@@ -239,6 +257,10 @@ void AVGPlayerCharacter::OnRunCompleted(const FInputActionValue& Value)
+ 
+ void AVGPlayerCharacter::OnFlashlight(const FInputActionValue& Value)
+ {
++	if (ExaminedItem)
++	{
++		return;
++	}
+ 	if (FlashlightFailTime > 0.f)
+ 	{
+ 		// Durante el fallo el interruptor hace "clic" pero no enciende.
+@@ -271,6 +293,15 @@ void AVGPlayerCharacter::BeginExamine(AVGExaminable* Item)
+ 	ExamineRotation = Item->GetActorQuat();
+ 	ExamineDistance = FMath::Clamp(Item->GetExamineRadius() * 2.4f + 12.f, 28.f, 95.f);
+ 	Item->BeginExamine();
++
++	// Iluminacion de examen constante: la linterna (a centimetros del objeto) lo quemaba y a oscuras
++	// no se veia. Se apaga la linterna y se usa una luz suave ajustada a la distancia del objeto.
++	bFlashlightBeforeExamine = Flashlight->IsVisible();
++	Flashlight->SetVisibility(false);
++	const float DistanceScale = FMath::Square(ExamineDistance / 40.f);
++	InspectLight->SetIntensity(InspectLumens * DistanceScale);
++	InspectLight->SetAttenuationRadius(ExamineDistance * 2.5f + 40.f);
++	InspectLight->SetVisibility(true);
+ }
+ 
+ void AVGPlayerCharacter::EndExamine()
+@@ -279,6 +310,11 @@ void AVGPlayerCharacter::EndExamine()
+ 	{
+ 		return;
+ 	}
++	InspectLight->SetVisibility(false);
++	if (FlashlightFailTime <= 0.f)
++	{
++		Flashlight->SetVisibility(bFlashlightBeforeExamine);
++	}
+ 	ExaminedItem->EndExamine();
+ 	ExaminedItem = nullptr;
+ 	Interaction->SetInteractionEnabled(true);
+diff --git a/Source/Vigilia/Public/VGPlayerCharacter.h b/Source/Vigilia/Public/VGPlayerCharacter.h
+index 3e36fa7..063b32c 100644
+--- a/Source/Vigilia/Public/VGPlayerCharacter.h
++++ b/Source/Vigilia/Public/VGPlayerCharacter.h
+@@ -6,6 +6,7 @@
+ 
+ class UCameraComponent;
+ class USpotLightComponent;
++class UPointLightComponent;
+ class UInputAction;
+ class UInputMappingContext;
+ class UVGInteractionComponent;
+@@ -63,6 +64,14 @@ public:
+ 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vigilia")
+ 	TObjectPtr<UVGInteractionComponent> Interaction;
+ 
++	/** Luz suave junto a la camara que solo se enciende al examinar un objeto. */
++	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vigilia")
++	TObjectPtr<UPointLightComponent> InspectLight;
++
++	/** Lumenes de la luz de examen para un objeto a 40 cm (se ajusta con la distancia). */
++	UPROPERTY(Config, EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Examine")
++	float InspectLumens = 6.f;
++
+ 	UPROPERTY(Config, EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Settings")
+ 	float MouseSensitivity = 1.f;
+ 
+@@ -123,6 +132,7 @@ private:
+ 	TObjectPtr<USoundBase> LoadedFlashlightSound;
+ 
+ 	void UpdateFlashlightFailure(float DeltaSeconds);
++	bool bFlashlightBeforeExamine = false;
+ 	float FlashlightFailTime = 0.f;
+ 	float FlashlightFailTotal = 0.f;
+ 	float FlashlightFlickerTimer = 0.f;
+-- 
+2.43.0
+

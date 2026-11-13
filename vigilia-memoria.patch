@@ -1,0 +1,138 @@
+From f0a76ff92a7ed01699af07d86fe5138564b2c83e Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Fri, 13 Nov 2026 22:00:11 +0000
+Subject: [PATCH] Memoria: aligera las mallas Raw de Megascans y reduce
+ reservas de memoria en Mac
+
+- slim_raw_meshes: mallas Raw a 12 % de triangulos Nanite y campo de distancia a 0,5
+  (una sola vez; reversible en la malla)
+- Mac: pool de texturas 1500 MB, cache de Lumen 2048, paginas VSM 2048, pool Nanite 384 MB
+- Solo la bombilla central del pasillo proyecta sombras; fluorescentes sin sombras
+
+Medido: el editor ocupaba 28,8 GB de 32 GB con 6 GB de intercambio.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01FSNh57Q72v7GgUik5hM21o
+---
+ Config/Mac/MacEngine.ini |  8 ++++++--
+ Scripts/vg_common.py     | 44 ++++++++++++++++++++++++++++++++++++++++
+ Scripts/vg_room.py       |  7 ++++++-
+ 3 files changed, 56 insertions(+), 3 deletions(-)
+
+diff --git a/Config/Mac/MacEngine.ini b/Config/Mac/MacEngine.ini
+index c35de43..be9d899 100644
+--- a/Config/Mac/MacEngine.ini
++++ b/Config/Mac/MacEngine.ini
+@@ -21,8 +21,8 @@ r.ScreenPercentage=67
+ r.TSR.History.ScreenPercentage=100
+ ; Niebla volumetrica a media resolucion: casi igual de bonita y la mitad de coste en la GPU del M4.
+ r.VolumetricFog.GridPixelSize=16
+-; La memoria es unificada: no reservar todo para texturas.
+-r.Streaming.PoolSize=2500
++; La memoria es unificada (CPU y GPU comparten los 32 GB): reservas contenidas.
++r.Streaming.PoolSize=1500
+ ; Si Nanite/VSM dieran problemas (soporte Beta), basta con poner estos dos valores a 0:
+ ;   r.Nanite=0  -> se usan las mallas de fallback
+ ;   r.Shadow.Virtual.Enable=0 -> shadow maps clasicos
+@@ -37,3 +37,7 @@ sg.ReflectionQuality=2
+ ; El volumen de luz para translucidos (cristales) no necesita Lumen ni tanta resolucion.
+ r.Lumen.TranslucencyVolume.Enable=0
+ r.TranslucencyLightingVolume.Dim=32
++; Memoria de GPU: cache de superficies de Lumen y paginas de sombras virtuales mas pequenas.
++r.LumenScene.SurfaceCache.AtlasSize=2048
++r.Shadow.Virtual.MaxPhysicalPages=2048
++r.Nanite.Streaming.StreamingPoolSize=384
+diff --git a/Scripts/vg_common.py b/Scripts/vg_common.py
+index 1252694..b16671e 100644
+--- a/Scripts/vg_common.py
++++ b/Scripts/vg_common.py
+@@ -505,3 +505,47 @@ def cap_fab_textures(max_size=2048, datas=None):
+     if capped:
+         log("Texturas de Fab limitadas a %d px: %d" % (max_size, capped))
+     return capped
++
++
++def slim_raw_meshes(resolved_list, keep_percent=0.12, df_scale=0.5):
++    """Las mallas Raw de Megascans traen millones de triangulos: en un Mac de 32 GB llenan la memoria
++    (Nanite, campos de distancia de Lumen, datos fuente). Se reducen una vez a un % de triangulos
++    (Nanite sigue mostrando el detalle de cerca) y se baja la resolucion del campo de distancia.
++    No toca el archivo original de Fab: si se quiere volver atras, basta con poner Keep Triangle
++    Percent a 100 en la malla. Devuelve cuantas mallas se han reducido."""
++    sub = unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem)
++    slimmed = 0
++    meshes = []
++    for resolved in resolved_list:
++        for data in resolved.meshes:
++            if "/raw/" in str(data.package_path).lower() + "/":
++                meshes.append(data)
++    if not meshes:
++        return 0
++    with unreal.ScopedSlowTask(len(meshes), "Vigilia: aligerando mallas Raw de Megascans (solo la primera vez)") as task:
++        task.make_dialog(False)
++        for data in meshes:
++            task.enter_progress_frame(1, str(data.asset_name))
++            mesh = data.get_asset()
++            try:
++                nanite = mesh.get_editor_property("nanite_settings")
++                if nanite.get_editor_property("keep_percent_triangles") <= keep_percent + 0.001:
++                    continue
++                nanite.set_editor_property("keep_percent_triangles", keep_percent)
++                sub.set_nanite_settings(mesh, nanite, True)
++                try:
++                    build = sub.get_lod_build_settings(mesh, 0)
++                    if build.get_editor_property("distance_field_resolution_scale") > df_scale:
++                        build.set_editor_property("distance_field_resolution_scale", df_scale)
++                        sub.set_lod_build_settings(mesh, 0, build)
++                except Exception as exc:  # noqa: BLE001
++                    warn("Campo de distancia de %s: %s" % (mesh.get_name(), exc))
++                eal.save_loaded_asset(mesh, False)
++                slimmed += 1
++            except Exception as exc:  # noqa: BLE001
++                warn("No se pudo aligerar %s: %s" % (mesh.get_name(), exc))
++            # Libera lo cargado de cada malla antes de la siguiente.
++            unreal.SystemLibrary.collect_garbage()
++    if slimmed:
++        log("Mallas Raw aligeradas: %d" % slimmed)
++    return slimmed
+diff --git a/Scripts/vg_room.py b/Scripts/vg_room.py
+index 02c6aa5..bb3e69a 100644
+--- a/Scripts/vg_room.py
++++ b/Scripts/vg_room.py
+@@ -6,7 +6,7 @@ import os
+ import unreal
+ 
+ import vg_materials as vm
+-from vg_common import (PROJECT_DIR, cap_fab_textures, ROOT, SOURCE_DIR, WARNINGS, assets_under, configure_texture, eal, front_direction,
++from vg_common import (PROJECT_DIR, cap_fab_textures, slim_raw_meshes, ROOT, SOURCE_DIR, WARNINGS, assets_under, configure_texture, eal, front_direction,
+                        gltf_mapping, group_for, import_files, load_json, log, prepare_meshes, resolve_all, safe_set,
+                        warn, yaw_of)
+ 
+@@ -1490,6 +1490,9 @@ def build_house(res, mats, info, out):
+             lamp.setup_mesh(g.main, V(-g.center[0], g.center[1], g.min[2]), R(roll=180.0))
+         set_bool(lamp, "directly_interactable", False)
+         lamp.setup_light(V(0, 0, -4.0), 65.0, 2500.0, 520.0)
++        if i != 1:
++            # Rendimiento: solo la bombilla central proyecta sombras (cada sombra cuesta en la GPU del M4).
++            safe_set(lamp.get_editor_property("light"), "cast_shadows", False)
+         safe_set(lamp, "switch_sound", sfx("switch_click"))
+         mark(lamp, "corridor_bulb_%d" % (i + 1), "House/Lights")
+         cord = actor_sub.spawn_actor_from_object(eal.load_asset("/Engine/BasicShapes/Cylinder"), V(x, CORR_YC, H - 14.0), R())
+@@ -1511,6 +1514,7 @@ def build_house(res, mats, info, out):
+             lamp.setup_mesh(g.main, V(-g.center[0], -g.center[1], -g.max[2]), R())
+         set_bool(lamp, "directly_interactable", False)
+         lamp.setup_light(V(0, 0, -14.0), lumens, 5600.0, 650.0)
++        safe_set(lamp.get_editor_property("light"), "cast_shadows", False)
+         set_bool(lamp, "on", on)
+         mark(lamp, name, "House/Lights")
+         house["lamps"][name] = lamp
+@@ -1720,6 +1724,7 @@ def build():
+         STATE["res"] = res
+         # Solo las texturas de los assets de Fab que se usan: cargar todo /Game/Fab (Raw a 8K) disparaba la memoria.
+         cap_fab_textures(2048, [d for r in res.values() if r and r.is_fab for d in r.textures])
++        slim_raw_meshes([r for r in res.values() if r and r.is_fab])
+         for name, resolved in res.items():
+             if resolved and name in manifest["slots"]:
+                 prepare_meshes(resolved)
+-- 
+2.43.0
+
