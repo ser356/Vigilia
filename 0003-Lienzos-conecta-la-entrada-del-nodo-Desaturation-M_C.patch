@@ -1,0 +1,56 @@
+From 35749362776797bc93a2411896eaa77f8a9da059 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Fri, 13 Nov 2026 08:53:45 +0000
+Subject: [PATCH] Lienzos: conecta la entrada del nodo Desaturation (M_Canvas
+ no compilaba)
+
+El pin principal del nodo no se llama 'Input'; se crea M_Canvas_v2 para no reutilizar
+el material roto ya guardado. En Mac, niebla volumetrica a media resolucion.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01FSNh57Q72v7GgUik5hM21o
+---
+ Config/Mac/MacEngine.ini | 2 ++
+ Scripts/vg_materials.py  | 6 ++++--
+ 2 files changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/Config/Mac/MacEngine.ini b/Config/Mac/MacEngine.ini
+index 72e04f7..57f6d54 100644
+--- a/Config/Mac/MacEngine.ini
++++ b/Config/Mac/MacEngine.ini
+@@ -19,6 +19,8 @@ r.RayTracing=False
+ ; TSR es mas costoso en Apple Silicon: se renderiza al 67 % y se reconstruye.
+ r.ScreenPercentage=67
+ r.TSR.History.ScreenPercentage=100
++; Niebla volumetrica a media resolucion: casi igual de bonita y la mitad de coste en la GPU del M4.
++r.VolumetricFog.GridPixelSize=16
+ ; La memoria es unificada: no reservar todo para texturas.
+ r.Streaming.PoolSize=2500
+ ; Si Nanite/VSM dieran problemas (soporte Beta), basta con poner estos dos valores a 0:
+diff --git a/Scripts/vg_materials.py b/Scripts/vg_materials.py
+index 7822064..e1eafdd 100644
+--- a/Scripts/vg_materials.py
++++ b/Scripts/vg_materials.py
+@@ -295,7 +295,8 @@ def canvas_master(default_texture):
+     asi la imagen nunca sale girada ni en espejo. Parametros:
+       Image, CropU/CropV (encuadre tipo "cover"), Mirror (1 = imagen en espejo, para eventos),
+       Desaturation (0-1, foto vieja), Tint, Darkness (multiplicador)."""
+-    mat, created = _new_material("M_Canvas")
++    # v2: la version anterior se guardo con el nodo Desaturation desconectado y no compilaba.
++    mat, created = _new_material("M_Canvas_v2")
+     if not created:
+         return mat
+     if hasattr(unreal, "MaterialExpressionLocalPosition"):
+@@ -344,7 +345,8 @@ def canvas_master(default_texture):
+     image = _tex_param(mat, "Image", default_texture, -700, 0)
+     _connect(uv, "", image, "UVs")
+     desat = _expr(mat, unreal.MaterialExpressionDesaturation, -450, 0)
+-    _connect(image, "RGB", desat, "Input")
++    # El pin principal del nodo Desaturation no tiene nombre ("Input" no existe y deja el nodo sin entrada).
++    _connect(image, "RGB", desat, "")
+     _connect(_scalar(mat, "Desaturation", 0.55, -700, 260), "", desat, "Fraction")
+     tint = _vector(mat, "Tint", (0.86, 0.8, 0.7, 1), -450, 200)
+     dark = _scalar(mat, "Darkness", 0.85, -450, 360)
+-- 
+2.43.0
+

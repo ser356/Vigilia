@@ -1,0 +1,36 @@
+From e66de7cc5203e932d5a2b1fb7948f7e13abbb39a Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Fri, 13 Nov 2026 08:56:27 +0000
+Subject: [PATCH] Mac: Lumen en calidad Alta y volumen de translucidos mas
+ barato
+
+Medido con stat gpu en M4: Lumen ~30 ms, Translucent Lighting ~6 ms.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01FSNh57Q72v7GgUik5hM21o
+---
+ Config/Mac/MacEngine.ini | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/Config/Mac/MacEngine.ini b/Config/Mac/MacEngine.ini
+index 57f6d54..c35de43 100644
+--- a/Config/Mac/MacEngine.ini
++++ b/Config/Mac/MacEngine.ini
+@@ -26,3 +26,14 @@ r.Streaming.PoolSize=2500
+ ; Si Nanite/VSM dieran problemas (soporte Beta), basta con poner estos dos valores a 0:
+ ;   r.Nanite=0  -> se usan las mallas de fallback
+ ;   r.Shadow.Virtual.Enable=0 -> shadow maps clasicos
++
++[ConsoleVariables]
++; Ajustes medidos con stat gpu en un MacBook Pro M4 (GPU de 10 nucleos), editor en escalabilidad Epica:
++;   Lumen (DeferredLighting + ScreenProbeGather) ~30 ms, Translucent Lighting ~6 ms, Postprocessing ~8 ms.
++; Iluminacion global y reflejos en "Alta": Lumen pensado para 60 fps en vez de 30; en un interior pequeno
++; apenas cambia la imagen.
++sg.GlobalIlluminationQuality=2
++sg.ReflectionQuality=2
++; El volumen de luz para translucidos (cristales) no necesita Lumen ni tanta resolucion.
++r.Lumen.TranslucencyVolume.Enable=0
++r.TranslucencyLightingVolume.Dim=32
+-- 
+2.43.0
+

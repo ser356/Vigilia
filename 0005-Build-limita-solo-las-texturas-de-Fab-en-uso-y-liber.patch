@@ -1,0 +1,65 @@
+From 68e4b316d5fd58652f114d763313a1147e6ef56a Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Fri, 13 Nov 2026 08:57:55 +0000
+Subject: [PATCH] Build: limita solo las texturas de Fab en uso y libera
+ memoria al terminar
+
+Cargar todo /Game/Fab (texturas Raw de 8K) en cada construccion disparaba el
+consumo del editor (25 GB medidos en un Mac de 32 GB).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01FSNh57Q72v7GgUik5hM21o
+---
+ Scripts/vg_common.py | 8 +++++---
+ Scripts/vg_room.py   | 5 ++++-
+ 2 files changed, 9 insertions(+), 4 deletions(-)
+
+diff --git a/Scripts/vg_common.py b/Scripts/vg_common.py
+index 38de458..1252694 100644
+--- a/Scripts/vg_common.py
++++ b/Scripts/vg_common.py
+@@ -483,13 +483,15 @@ def rotated_size(group, yaw_deg):
+     return group.size[0] * c + group.size[1] * s, group.size[0] * s + group.size[1] * c
+ 
+ 
+-def cap_fab_textures(max_size=2048):
++def cap_fab_textures(max_size=2048, datas=None):
+     """Limita todas las texturas importadas desde Fab (las Raw vienen a 8K) a max_size.
+     No borra nada: el original se queda en disco y se puede volver a subir el limite cuando se quiera.
+     La primera vez recomprime las texturas afectadas (tarda unos minutos); despues es instantaneo."""
+     capped = 0
+-    for root in FAB_ROOTS:
+-        for data in assets_under(root, ("Texture2D",)):
++    if datas is None:
++        datas = [d for root in FAB_ROOTS for d in assets_under(root, ("Texture2D",))]
++    for data in datas:
++        if True:
+             tex = data.get_asset()
+             try:
+                 current = tex.get_editor_property("max_texture_size")
+diff --git a/Scripts/vg_room.py b/Scripts/vg_room.py
+index a73aa69..94a48e8 100644
+--- a/Scripts/vg_room.py
++++ b/Scripts/vg_room.py
+@@ -1065,7 +1065,8 @@ def build():
+         photos = import_local_sources()
+         task.enter_progress_frame(1, "Resolviendo assets (Fab / Megascans / Poly Haven)")
+         res = resolve_all(manifest)
+-        cap_fab_textures(2048)
++        # Solo las texturas de los assets de Fab que se usan: cargar todo /Game/Fab (Raw a 8K) disparaba la memoria.
++        cap_fab_textures(2048, [d for r in res.values() if r and r.is_fab for d in r.textures])
+         for name, resolved in res.items():
+             if resolved and name in manifest["slots"]:
+                 prepare_meshes(resolved)
+@@ -1085,6 +1086,8 @@ def build():
+         task.enter_progress_frame(1, "Guardando")
+         level_sub.save_current_level()
+         eal.save_directory(ROOT, True, True)
++    # Libera lo cargado durante la construccion (texturas fuente de 8K, mallas Raw...).
++    unreal.SystemLibrary.collect_garbage()
+     report = write_report(manifest, res)
+     log("Salon construido: %s (%d avisos). Pulsa Play para probarlo." % (MAP_PATH, len(WARNINGS)))
+     return report
+-- 
+2.43.0
+

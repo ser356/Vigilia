@@ -1,0 +1,71 @@
+From 9d72cf8f45eb32da4573123fe34caa0d6047670e Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Fri, 13 Nov 2026 08:46:35 +0000
+Subject: [PATCH] Lampara de pie completa y Lumen a calidad normal
+
+- Fab: si una carpeta trae varias mallas que juntas encajan con el tamano real
+  (pantalla + pie), se usan todas; si se solapan o no encajan, solo la principal.
+  Antes la lampara quedaba reducida a la pantalla y el escalado la volvia gigante.
+- Calidad de Lumen del postproceso de 2 a 1: el editor iba a tirones en el M4
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01FSNh57Q72v7GgUik5hM21o
+---
+ Scripts/vg_common.py | 20 ++++++++++++++++----
+ Scripts/vg_room.py   |  9 +++++----
+ 2 files changed, 21 insertions(+), 8 deletions(-)
+
+diff --git a/Scripts/vg_common.py b/Scripts/vg_common.py
+index 1446b3d..38de458 100644
+--- a/Scripts/vg_common.py
++++ b/Scripts/vg_common.py
+@@ -398,10 +398,22 @@ class MeshGroup(object):
+ 
+ def group_for(resolved):
+     meshes = [d.get_asset() for d in resolved.meshes]
+-    if resolved.is_fab and len(meshes) > 1:
+-        # En Fab varias mallas en una carpeta suelen ser variantes, no piezas: se usa la mas voluminosa.
+-        return MeshGroup([MeshGroup(meshes).main])
+-    return MeshGroup(meshes)
++    if not (resolved.is_fab and len(meshes) > 1):
++        return MeshGroup(meshes)
++    # Varias mallas en una carpeta de Fab pueden ser variantes (se usa una) o piezas de un mismo objeto
++    # (pantalla + pie de una lampara: se usan todas). Se decide por el tamano real esperado del hueco.
++    whole = MeshGroup(meshes)
++    main = MeshGroup([whole.main])
++    if max(whole.size) <= max(main.size) * 1.1:
++        return main  # se solapan: variantes o LODs del mismo objeto
++    expected = resolved.spec.get("size_cm")
++    if expected:
++        err_whole = abs(math.log(max(whole.size) / float(expected)))
++        err_main = abs(math.log(max(main.size) / float(expected)))
++        if err_whole < err_main:
++            log("'%s': %d piezas combinadas (%.0f cm)" % (resolved.name, len(meshes), max(whole.size)))
++            return whole
++    return main
+ 
+ 
+ def _axis_dir(axis_index, sign):
+diff --git a/Scripts/vg_room.py b/Scripts/vg_room.py
+index 6a0e887..a73aa69 100644
+--- a/Scripts/vg_room.py
++++ b/Scripts/vg_room.py
+@@ -902,10 +902,11 @@ def build_lighting(info):
+         "color_gain": unreal.Vector4(x=0.9, y=1.0, z=0.96, w=1.0),
+         "color_saturation_highlights": unreal.Vector4(x=0.7, y=0.7, z=0.7, w=1.0),
+         "color_gamma_shadows": unreal.Vector4(x=0.95, y=1.0, z=1.03, w=1.0),
+-        "lumen_scene_lighting_quality": 2.0,
+-        "lumen_scene_detail": 2.0,
+-        "lumen_final_gather_quality": 2.0,
+-        "lumen_reflection_quality": 2.0,
++        # Calidad de Lumen por defecto (1). Con 2 el M4 iba a tirones en el editor; subir solo para capturas.
++        "lumen_scene_lighting_quality": 1.0,
++        "lumen_scene_detail": 1.0,
++        "lumen_final_gather_quality": 1.0,
++        "lumen_reflection_quality": 1.0,
+         "ambient_occlusion_intensity": 0.6,
+     }
+     for name, value in values.items():
+-- 
+2.43.0
+
