@@ -518,11 +518,20 @@ def setup_television(tv, prep, mats):
     safe_set(tv, "static_loop_sound", sfx("tv_static_loop"))
 
 
-def setup_lamp(lamp, prep, lumens=450.0):
+def setup_lamp(lamp, prep, lumens=380.0):
     g = prep.group
     top = g.centroid(0.2) or [0.0, 0.0]
     local = V(g.center[0] + top[0] * g.size[0], g.center[1] + top[1] * g.size[1], g.min[2] + g.size[2] * 0.86)
     lamp.setup_light(local, lumens, 3000.0, 600.0)
+    # Una bombilla a pocos cm de la pared la quema (mancha blanca). Se separa hacia el centro
+    # de la sala lo que haga falta para quedar a >= 35 cm de las paredes, y se suaviza la fuente.
+    light = lamp.get_editor_property("light")
+    pos = light.get_world_location()
+    x = max(-HX + 35.0, min(HX - 35.0, pos.x))
+    y = max(-HY + 35.0, min(HY - 35.0, pos.y))
+    light.set_world_location(V(x, y, pos.z), False, False)
+    safe_set(light, "source_radius", 6.0)
+    safe_set(light, "soft_source_radius", 18.0)
     safe_set(lamp, "switch_sound", sfx("switch_click"))
 
 
@@ -734,7 +743,7 @@ def build_lighting(info):
     comp = street.get_component_by_class(unreal.SpotLightComponent)
     comp.set_mobility(unreal.ComponentMobility.MOVABLE)
     safe_set(comp, "intensity_units", unreal.LightUnits.LUMENS)
-    safe_set(comp, "intensity", 1600.0)
+    safe_set(comp, "intensity", 1000.0)
     safe_set(comp, "use_temperature", True)
     safe_set(comp, "temperature", 7200.0)
     safe_set(comp, "attenuation_radius", 1600.0)
@@ -756,9 +765,9 @@ def build_lighting(info):
     s = ppv.get_editor_property("settings")
     values = {
         # Exposicion contenida: la habitacion debe poder quedarse realmente a oscuras.
-        # EV100. El minimo alto impide que la camara "abra" en la oscuridad y lo tina todo del color
-        # de la unica luz que quede: a oscuras, la habitacion debe verse oscura.
-        "auto_exposure_min_brightness": 1.5,
+        # EV100. Con 1,5 la sala a oscuras quedaba negra e injugable; con -1 se tenia de rojo.
+        # 0,3 deja la penumbra legible (siluetas, la ventana) sin "abrir" la camara del todo.
+        "auto_exposure_min_brightness": 0.3,
         "auto_exposure_max_brightness": 5.0,
         "auto_exposure_bias": 0.0,
         "auto_exposure_speed_up": 1.5,
