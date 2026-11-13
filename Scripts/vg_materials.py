@@ -295,7 +295,8 @@ def canvas_master(default_texture):
     asi la imagen nunca sale girada ni en espejo. Parametros:
       Image, CropU/CropV (encuadre tipo "cover"), Mirror (1 = imagen en espejo, para eventos),
       Desaturation (0-1, foto vieja), Tint, Darkness (multiplicador)."""
-    mat, created = _new_material("M_Canvas")
+    # v2: la version anterior se guardo con el nodo Desaturation desconectado y no compilaba.
+    mat, created = _new_material("M_Canvas_v2")
     if not created:
         return mat
     if hasattr(unreal, "MaterialExpressionLocalPosition"):
@@ -344,7 +345,8 @@ def canvas_master(default_texture):
     image = _tex_param(mat, "Image", default_texture, -700, 0)
     _connect(uv, "", image, "UVs")
     desat = _expr(mat, unreal.MaterialExpressionDesaturation, -450, 0)
-    _connect(image, "RGB", desat, "Input")
+    # El pin principal del nodo Desaturation no tiene nombre ("Input" no existe y deja el nodo sin entrada).
+    _connect(image, "RGB", desat, "")
     _connect(_scalar(mat, "Desaturation", 0.55, -700, 260), "", desat, "Fraction")
     tint = _vector(mat, "Tint", (0.86, 0.8, 0.7, 1), -450, 200)
     dark = _scalar(mat, "Darkness", 0.85, -450, 360)
