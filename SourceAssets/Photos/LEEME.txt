@@ -1,0 +1,9 @@
+Pon aqui tus fotos (.jpg, .jpeg o .png) y reconstruye con Scripts/build_room.py.
+
+- Se reparten entre los marcos: cada marco recibe la foto con la proporcion mas parecida
+  (vertical para marcos verticales, apaisada para los horizontales), sin repetir mientras haya fotos.
+- Se recortan para llenar el marco sin deformarse (encuadre centrado).
+- Se envejecen en el material (desaturadas, tono sepia y algo oscuras). Para cambiarlo, abre
+  Content/Vigilia/Materials/Instances/MI_Canvas_* y ajusta Desaturation, Tint y Darkness.
+- Si esta carpeta esta vacia se usan las imagenes CC0 de SourceAssets/DefaultArt.
+- El cuadro grande del salon tiene una copia en espejo que aparece cuando no lo miras.

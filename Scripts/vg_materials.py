@@ -288,3 +288,66 @@ def classify_surface_textures(resolved):
         if items:
             out[key] = sorted(items, key=lambda it: it[0])[0][1]
     return out
+
+
+def canvas_master(default_texture):
+    """Lienzo para marcos vacios. Las UV salen de la posicion local del plano (no de las UV de la malla),
+    asi la imagen nunca sale girada ni en espejo. Parametros:
+      Image, CropU/CropV (encuadre tipo "cover"), Mirror (1 = imagen en espejo, para eventos),
+      Desaturation (0-1, foto vieja), Tint, Darkness (multiplicador)."""
+    mat, created = _new_material("M_Canvas")
+    if not created:
+        return mat
+    if hasattr(unreal, "MaterialExpressionLocalPosition"):
+        local = _expr(mat, unreal.MaterialExpressionLocalPosition, -1900, 0)
+    else:
+        world = _expr(mat, unreal.MaterialExpressionWorldPosition, -2100, 0)
+        local = _expr(mat, unreal.MaterialExpressionTransformPosition, -1900, 0)
+        safe_set(local, "transform_source_type", unreal.MaterialPositionTransformSource.TRANSFORMPOSSOURCE_WORLD)
+        safe_set(local, "transform_type", unreal.MaterialPositionTransformSource.TRANSFORMPOSSOURCE_LOCAL)
+        _connect(world, "", local, "")
+    xy = _expr(mat, unreal.MaterialExpressionComponentMask, -1700, 0)
+    xy.set_editor_property("r", True)
+    xy.set_editor_property("g", True)
+    xy.set_editor_property("b", False)
+    xy.set_editor_property("a", False)
+    _connect(local, "", xy, "")
+    # Plano de 100x100: X local = horizontal (el espectador lo ve hacia su izquierda), Y local = arriba.
+    # UV centrada: u = -x/100, v = -y/100  (0 en el centro, V hacia abajo como en las texturas).
+    k = _expr(mat, unreal.MaterialExpressionConstant2Vector, -1700, 160)
+    k.set_editor_property("r", -0.01)
+    k.set_editor_property("g", -0.01)
+    centered = _mul(mat, xy, "", k, "", -1500, 0)
+
+    mirror = _scalar(mat, "Mirror", 0.0, -1700, 320)
+    flip = _expr(mat, unreal.MaterialExpressionLinearInterpolate, -1500, 300)
+    one = _expr(mat, unreal.MaterialExpressionConstant, -1700, 420)
+    one.set_editor_property("r", 1.0)
+    minus = _expr(mat, unreal.MaterialExpressionConstant, -1700, 500)
+    minus.set_editor_property("r", -1.0)
+    _connect(one, "", flip, "A")
+    _connect(minus, "", flip, "B")
+    _connect(mirror, "", flip, "Alpha")
+    mirror_vec = _expr(mat, unreal.MaterialExpressionAppendVector, -1350, 300)
+    _connect(flip, "", mirror_vec, "A")
+    _connect(one, "", mirror_vec, "B")
+
+    crop = _expr(mat, unreal.MaterialExpressionAppendVector, -1350, 460)
+    _connect(_scalar(mat, "CropU", 1.0, -1550, 560), "", crop, "A")
+    _connect(_scalar(mat, "CropV", 1.0, -1550, 660), "", crop, "B")
+
+    half = _expr(mat, unreal.MaterialExpressionConstant2Vector, -1150, 600)
+    half.set_editor_property("r", 0.5)
+    half.set_editor_property("g", 0.5)
+    uv = _add(mat, _mul(mat, _mul(mat, centered, "", mirror_vec, "", -1200, 100), "", crop, "", -1050, 200), half, -900, 200)
+
+    image = _tex_param(mat, "Image", default_texture, -700, 0)
+    _connect(uv, "", image, "UVs")
+    desat = _expr(mat, unreal.MaterialExpressionDesaturation, -450, 0)
+    _connect(image, "RGB", desat, "Input")
+    _connect(_scalar(mat, "Desaturation", 0.55, -700, 260), "", desat, "Fraction")
+    tint = _vector(mat, "Tint", (0.86, 0.8, 0.7, 1), -450, 200)
+    dark = _scalar(mat, "Darkness", 0.85, -450, 360)
+    _to_prop(_mul(mat, _mul(mat, desat, "", tint, "", -250, 100), "", dark, "", -100, 150), "", MP.MP_BASE_COLOR)
+    _to_prop(_scalar(mat, "Roughness", 0.55, -450, 480), "", MP.MP_ROUGHNESS)
+    return _finish(mat)

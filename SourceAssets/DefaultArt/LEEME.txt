@@ -1,0 +1,3 @@
+Imagenes CC0 recortadas de las texturas de los marcos de Poly Haven (polyhaven.com):
+fancy_picture_frame_01, hanging_picture_frame_02, hanging_picture_frame_03,
+standing_picture_frame_01 y standing_picture_frame_02. Se usan si SourceAssets/Photos esta vacia.

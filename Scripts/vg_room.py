@@ -1,4 +1,5 @@
 """Constructor procedural del salon de Vigilia. Idempotente: borra y regenera solo lo etiquetado como VG."""
+import math
 import os
 
 import unreal
@@ -278,6 +279,15 @@ def import_local_sources():
         if new:
             import_files(new, ROOT + "/Textures/Photos")
         photos = [d.get_asset() for d in assets_under(ROOT + "/Textures/Photos", ("Texture2D",))]
+    if not photos:
+        # Sin fotos propias: cuadros y fotos antiguas CC0 (recortadas de los modelos de Poly Haven).
+        art_dir = os.path.join(SOURCE_DIR, "DefaultArt")
+        if os.path.isdir(art_dir):
+            files = [os.path.join(art_dir, f) for f in sorted(os.listdir(art_dir)) if f.lower().endswith(".jpg")]
+            new = [f for f in files if not eal.does_asset_exist("%s/Textures/DefaultArt/%s" % (ROOT, os.path.splitext(os.path.basename(f))[0]))]
+            if new:
+                import_files(new, ROOT + "/Textures/DefaultArt")
+            photos = [d.get_asset() for d in assets_under(ROOT + "/Textures/DefaultArt", ("Texture2D",))]
     return photos
 
 
@@ -299,6 +309,7 @@ def build_materials(res):
     mats["tv_add"] = vm.tv_screen_master(noise, True)
     mats["tv_opaque"] = vm.tv_screen_master(noise, False)
     mats["photo_master"] = vm.photo_master(defaults["BaseColor"])
+    mats["canvas_master"] = vm.canvas_master(defaults["BaseColor"])
 
     def surface(name, projection, **scalars):
         r = res.get(name)
@@ -308,12 +319,16 @@ def build_materials(res):
         STATE["used"][name] = r
         tex = vm.classify_surface_textures(r)
         params = {"TileSize": r.spec.get("tile_cm", 200)}
-        params.update(scalars)
-        return vm.instance("MI_%s_%s" % (name, projection), masters[projection], tex, params)
+        vectors = {}
+        for key, value in scalars.items():
+            (vectors if isinstance(value, tuple) else params)[key] = value
+        return vm.instance("MI_%s_%s" % (name, projection), masters[projection], tex, params, vectors)
 
-    mats["wall_XZ"] = surface("wall", "XZ")
-    mats["wall_YZ"] = surface("wall", "YZ")
-    mats["floor"] = surface("floor", "XY", RoughnessScale=0.85)
+    # Paredes y suelo mas sucios y apagados (el papel de Megascans es naranja intenso).
+    wall_tint = {"Tint": (0.62, 0.6, 0.56, 1)}
+    mats["wall_XZ"] = surface("wall", "XZ", **wall_tint)
+    mats["wall_YZ"] = surface("wall", "YZ", **wall_tint)
+    mats["floor"] = surface("floor", "XY", RoughnessScale=0.85, Tint=(0.7, 0.68, 0.64, 1))
     mats["ceiling"] = surface("ceiling", "XY")
     mats["rug"] = surface("rug", "XY")
 
@@ -540,11 +555,11 @@ def setup_television(tv, prep, mats):
     safe_set(tv, "static_loop_sound", sfx("tv_static_loop"))
 
 
-def setup_lamp(lamp, prep, lumens=260.0):
+def setup_lamp(lamp, prep, lumens=150.0):
     g = prep.group
     top = g.centroid(0.2) or [0.0, 0.0]
     local = V(g.center[0] + top[0] * g.size[0], g.center[1] + top[1] * g.size[1], g.min[2] + g.size[2] * 0.86)
-    lamp.setup_light(local, lumens, 3000.0, 600.0)
+    lamp.setup_light(local, lumens, 2400.0, 520.0)
     # Una bombilla a pocos cm de la pared la quema (mancha blanca). Se separa hacia el centro
     # de la sala lo que haga falta para quedar a >= 35 cm de las paredes, y se suaviza la fuente.
     light = lamp.get_editor_property("light")
@@ -711,22 +726,103 @@ def furnish(res, mats, info, photos):
     if p:
         out["newspaper"] = p.spawn(25.0, -95.0, 0.3, folder="Decor")
 
-    # --- Fotografias propias en los marcos (SourceAssets/Photos) ---
-    if photos:
-        index = 0
-        for key in ("frame_medium", "frame_standing", "frame_small", "frame_oval"):
-            placed = out.get(key)
-            if not placed:
-                continue
-            slot = find_slot(placed.prep.group.main, ("artwork", "canvas", "photo", "picture"))
-            if slot < 0:
-                continue
-            photo = photos[index % len(photos)]
-            index += 1
-            inst = vm.instance("MI_Photo_%s" % key, mats["photo_master"], {"Image": photo})
-            comp = placed.actor.get_component_by_class(unreal.StaticMeshComponent)
-            comp.set_material(slot, inst)
+    add_pictures(out, mats, photos)
     return out
+
+
+# --------------------------------------------------------------------------------------
+# Imagenes en los marcos: SourceAssets/Photos (o DefaultArt si no hay fotos propias)
+# --------------------------------------------------------------------------------------
+FRAME_WALLS = {"frame_large": "west", "frame_medium": "south", "frame_oval": "north"}
+WALL_NORMALS = {"west": (1.0, 0.0), "south": (0.0, 1.0), "north": (0.0, -1.0)}
+
+
+def _aspect(tex):
+    try:
+        return tex.blueprint_get_size_x() / float(max(tex.blueprint_get_size_y(), 1))
+    except Exception:  # noqa: BLE001
+        return 1.0
+
+
+def _pick_photo(photos, used, aspect):
+    """Foto aun no usada con la proporcion mas parecida (retrato para marcos verticales, etc.)."""
+    pool = [p for p in photos if p.get_name() not in used] or photos
+    best = min(pool, key=lambda p: abs(math.log(max(_aspect(p), 0.01) / max(aspect, 0.01))))
+    used.add(best.get_name())
+    return best
+
+
+def _cover_crop(photo_aspect, canvas_aspect):
+    """Encuadre tipo "cover": rellena el lienzo sin deformar, recortando lo que sobre."""
+    if photo_aspect > canvas_aspect:
+        return canvas_aspect / photo_aspect, 1.0
+    return 1.0, photo_aspect / canvas_aspect
+
+
+def spawn_canvas(key, placed, wall, mats, photo, mirror=False):
+    nx, ny = WALL_NORMALS[wall]
+    along = (-ny, nx)
+    face_w = placed.wy if wall == "west" else placed.wx
+    width, height = face_w * 0.9, placed.h * 0.9
+    cz = placed.z + placed.h * 0.5
+    # A media profundidad del marco: por delante de un posible fondo y por detras de la moldura.
+    depth = placed.wx if wall == "west" else placed.wy
+    inset = max(0.5, depth * 0.45)
+    if wall == "west":
+        loc = V(-HX + inset, placed.y, cz)
+    elif wall == "south":
+        loc = V(placed.x, -HY + inset, cz)
+    else:
+        loc = V(placed.x, HY - inset, cz)
+    # Ejes del plano: X = a lo largo de la pared, Y = arriba, Z = normal hacia la sala.
+    rot = ML.make_rotation_from_axes(V(along[0], along[1], 0), V(0, 0, 1), V(nx, ny, 0))
+    actor = actor_sub.spawn_actor_from_object(eal.load_asset("/Engine/BasicShapes/Plane"), loc, rot)
+    actor.set_actor_scale3d(V(width / 100.0, height / 100.0, 1.0))
+    comp = actor.static_mesh_component
+    comp.set_mobility(unreal.ComponentMobility.MOVABLE)
+    comp.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
+    crop_u, crop_v = _cover_crop(_aspect(photo), width / max(height, 1.0))
+    inst = vm.instance("MI_Canvas_%s%s" % (key, "_mirror" if mirror else ""), mats["canvas_master"], {"Image": photo},
+                       {"CropU": crop_u, "CropV": crop_v, "Mirror": 1.0 if mirror else 0.0,
+                        "Darkness": 0.6 if mirror else 0.85})
+    comp.set_material(0, inst)
+    mark(actor, "canvas_%s%s" % (key, "_mirror" if mirror else ""), "Decor")
+    # El lienzo se mueve con el cuadro (p. ej. cuando un evento lo tuerce).
+    actor.attach_to_actor(placed.actor, "", unreal.AttachmentRule.KEEP_WORLD, unreal.AttachmentRule.KEEP_WORLD,
+                          unreal.AttachmentRule.KEEP_WORLD, False)
+    return actor
+
+
+def add_pictures(out, mats, photos):
+    """Pone una imagen en cada marco. Marcos con superficie propia (Poly Haven): se sustituye su material.
+    Marcos vacios (Megascans): lienzo detras. En el cuadro grande se crea ademas una copia en espejo
+    oculta que un evento intercambia cuando no lo miras."""
+    STATE["canvases"] = {}
+    if not photos:
+        return
+    used = set()
+    for key in ("frame_large", "frame_medium", "frame_oval", "frame_standing", "frame_small"):
+        placed = out.get(key)
+        if not placed:
+            continue
+        slot = find_slot(placed.prep.group.main, ("artwork", "canvas", "photo", "picture"))
+        if slot >= 0:
+            photo = _pick_photo(photos, used, 1.0)
+            inst = vm.instance("MI_Photo_%s" % key, mats["photo_master"], {"Image": photo})
+            placed.actor.get_component_by_class(unreal.StaticMeshComponent).set_material(slot, inst)
+            continue
+        wall = FRAME_WALLS.get(key)
+        if not wall:
+            continue  # marcos de mesa sin superficie: se dejan tal cual
+        face_w = placed.wy if wall == "west" else placed.wx
+        photo = _pick_photo(photos, used, face_w / max(placed.h, 1.0))
+        normal = spawn_canvas(key, placed, wall, mats, photo)
+        entry = {"normal": normal}
+        if key == "frame_large":
+            mirrored = spawn_canvas(key, placed, wall, mats, photo, mirror=True)
+            mirrored.set_actor_hidden_in_game(True)
+            entry["mirror"] = mirrored
+        STATE["canvases"][key] = entry
 
 
 # --------------------------------------------------------------------------------------
@@ -746,7 +842,7 @@ def build_lighting(info):
     moon = spawn_marked(unreal.DirectionalLight, "moon", V(0, 600, 600), R(yaw=-78.0, pitch=-55.0))
     comp = moon.get_component_by_class(unreal.DirectionalLightComponent)
     comp.set_mobility(unreal.ComponentMobility.MOVABLE)
-    safe_set(comp, "intensity", 0.35)
+    safe_set(comp, "intensity", 0.2)
     safe_set(comp, "light_color", unreal.Color(r=168, g=192, b=255, a=255))
     safe_set(comp, "atmosphere_sun_light", True)
 
@@ -754,7 +850,7 @@ def build_lighting(info):
     comp = sky.get_component_by_class(unreal.SkyLightComponent)
     comp.set_mobility(unreal.ComponentMobility.MOVABLE)
     safe_set(comp, "real_time_capture", True)
-    safe_set(comp, "intensity", 0.3)
+    safe_set(comp, "intensity", 0.12)
     safe_set(comp, "light_color", unreal.Color(r=150, g=170, b=210, a=255))
 
     # Farola fria en la calle: entra en diagonal por la ventana y dibuja las cortinas en la pared.
@@ -765,39 +861,47 @@ def build_lighting(info):
     comp = street.get_component_by_class(unreal.SpotLightComponent)
     comp.set_mobility(unreal.ComponentMobility.MOVABLE)
     safe_set(comp, "intensity_units", unreal.LightUnits.LUMENS)
-    safe_set(comp, "intensity", 1000.0)
+    safe_set(comp, "intensity", 700.0)
     safe_set(comp, "use_temperature", True)
-    safe_set(comp, "temperature", 7200.0)
+    safe_set(comp, "temperature", 8500.0)
     safe_set(comp, "attenuation_radius", 1600.0)
     safe_set(comp, "inner_cone_angle", 16.0)
     safe_set(comp, "outer_cone_angle", 30.0)
     safe_set(comp, "source_radius", 12.0)
-    safe_set(comp, "volumetric_scattering_intensity", 2.0)
+    # Rayos visibles en el polvo: la luz fria "corta" la habitacion.
+    safe_set(comp, "volumetric_scattering_intensity", 4.0)
 
     fog = spawn_marked(unreal.ExponentialHeightFog, "fog", V(0, 0, 0))
     comp = fog.get_component_by_class(unreal.ExponentialHeightFogComponent)
-    safe_set(comp, "fog_density", 0.012)
+    safe_set(comp, "fog_density", 0.03)
     safe_set(comp, "fog_height_falloff", 0.05)
     safe_set(comp, "enable_volumetric_fog", True)
-    safe_set(comp, "volumetric_fog_scattering_distribution", 0.45)
-    safe_set(comp, "volumetric_fog_extinction_scale", 0.6)
+    safe_set(comp, "volumetric_fog_scattering_distribution", 0.6)
+    safe_set(comp, "volumetric_fog_extinction_scale", 1.4)
 
     ppv = spawn_marked(unreal.PostProcessVolume, "post_process", V(0, 0, 100))
     safe_set(ppv, "unbound", True)
     s = ppv.get_editor_property("settings")
     values = {
-        # Exposicion contenida: la habitacion debe poder quedarse realmente a oscuras.
-        # EV100. Con 1,5 la sala a oscuras quedaba negra e injugable; con -1 se tenia de rojo.
-        # 0,3 deja la penumbra legible (siluetas, la ventana) sin "abrir" la camara del todo.
-        "auto_exposure_min_brightness": 0.3,
-        "auto_exposure_max_brightness": 5.0,
-        "auto_exposure_bias": 0.0,
-        "auto_exposure_speed_up": 1.5,
-        "auto_exposure_speed_down": 0.8,
-        "bloom_intensity": 0.2,
-        "vignette_intensity": 0.45,
-        "film_grain_intensity": 0.22,
-        "scene_fringe_intensity": 0.15,
+        # --- Ambiente: penumbra fria, colores apagados, una sola luz calida y debil ---
+        # Rango de exposicion estrecho (EV100 0-2,5): la camara NO "normaliza" la sala; la zona de la
+        # lampara se ve iluminada y todo lo demas se queda en sombra. Con la lampara apagada se ve la
+        # ventana y siluetas (y la linterna, F).
+        "auto_exposure_min_brightness": 0.0,
+        "auto_exposure_max_brightness": 2.5,
+        "auto_exposure_bias": -0.5,
+        "auto_exposure_speed_up": 0.8,
+        "auto_exposure_speed_down": 0.5,
+        "bloom_intensity": 0.12,
+        "vignette_intensity": 0.7,
+        "film_grain_intensity": 0.35,
+        "scene_fringe_intensity": 0.25,
+        # Gradacion: desaturado y algo verdoso (estetica de cinta VHS vieja / P.T.), negros densos.
+        "color_saturation": unreal.Vector4(x=0.55, y=0.55, z=0.55, w=1.0),
+        "color_contrast": unreal.Vector4(x=1.12, y=1.12, z=1.12, w=1.0),
+        "color_gain": unreal.Vector4(x=0.9, y=1.0, z=0.96, w=1.0),
+        "color_saturation_highlights": unreal.Vector4(x=0.7, y=0.7, z=0.7, w=1.0),
+        "color_gamma_shadows": unreal.Vector4(x=0.95, y=1.0, z=1.03, w=1.0),
         "lumen_scene_lighting_quality": 2.0,
         "lumen_scene_detail": 2.0,
         "lumen_final_gather_quality": 2.0,
@@ -874,6 +978,11 @@ def build_gameplay(out, door, info, mats):
     t = trigger("event_window", (w["cx"], HY - 75.0, 100.0), (90.0, 70.0, 100.0), min_game_time=20.0)
     t.add_step(action("PlaySound"), door, 0.8, sfx("pipe_knock"), unreal.Transform(location=V(0, -200, 120)), False)
     t.add_step(action("DoorOpen"), door, 4.5, None, identity, True)
+    canvas = STATE.get("canvases", {}).get("frame_large", {})
+    if canvas.get("mirror"):
+        # Alteracion sutil: el cuadro grande aparece en espejo (y algo mas oscuro) si no lo estas mirando.
+        t.add_step(action("ToggleVisibility"), canvas["normal"], 6.0, None, identity, True)
+        t.add_step(action("ToggleVisibility"), canvas["mirror"], 6.0, None, identity, True)
     frame = out.get("frame_medium")
     if frame:
         tilt = unreal.Transform(location=V(0, 0, 0), rotation=R(roll=0.0, pitch=7.0), scale=V(1, 1, 1))

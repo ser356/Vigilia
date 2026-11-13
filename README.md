@@ -49,5 +49,5 @@ Config/              ajustes comunes + Mac/ y Windows/ por plataforma
 ## Iterar
 
 - Mueve o gira cualquier actor `VG_*` y ejecuta `Scripts/save_layout.py`: la proxima reconstruccion lo respeta.
-- Pon fotos `.jpg` en `SourceAssets/Photos/` y reconstruye: se asignan a los marcos.
+- Pon fotos `.jpg` en `SourceAssets/Photos/` y reconstruye: se asignan a los marcos (ver `SourceAssets/Photos/LEEME.txt`).
 - Lo que anadas a mano al nivel (sin la etiqueta `VG`) no se toca al reconstruir.
