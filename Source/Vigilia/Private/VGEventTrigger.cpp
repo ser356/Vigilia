@@ -5,6 +5,7 @@
 #include "VGStatics.h"
 #include "VGPhone.h"
 #include "VGPlayerCharacter.h"
+#include "VGLoopSubsystem.h"
 #include "Components/AudioComponent.h"
 #include "Components/BoxComponent.h"
 #include "GameFramework/Pawn.h"
@@ -27,11 +28,36 @@ void AVGEventTrigger::BeginPlay()
 {
 	Super::BeginPlay();
 	Box->OnComponentBeginOverlap.AddDynamic(this, &AVGEventTrigger::HandleOverlap);
+	if (RequiredLoop >= 0)
+	{
+		if (UVGLoopSubsystem* Loop = GetWorld()->GetSubsystem<UVGLoopSubsystem>())
+		{
+			Loop->OnLoopAdvanced.AddDynamic(this, &AVGEventTrigger::HandleLoop);
+		}
+	}
 	if (AutoFireAfter >= 0.f)
 	{
 		FTimerHandle Handle;
 		GetWorldTimerManager().SetTimer(Handle, this, &AVGEventTrigger::TryAutoFire, FMath::Max(AutoFireAfter, 0.1f), false);
 	}
+}
+
+void AVGEventTrigger::HandleLoop(int32 LoopCount)
+{
+	if (LoopCount == RequiredLoop && !(bOnce && bFired))
+	{
+		Fire();
+	}
+}
+
+void AVGEventTrigger::AddMessageStep(float Delay, const FText& Text, float Duration)
+{
+	Modify();
+	FVGEventStep& Step = Steps.AddDefaulted_GetRef();
+	Step.Action = EVGEventAction::ShowMessage;
+	Step.Delay = Delay;
+	Step.Message = Text;
+	Step.Offset = FTransform(FVector(Duration, 0.f, 0.f));
 }
 
 bool AVGEventTrigger::IsPlayerInside() const
@@ -288,6 +314,27 @@ void AVGEventTrigger::ExecuteStep(int32 Index)
 		{
 			const float Duration = Step.Offset.GetLocation().X > 0.1 ? static_cast<float>(Step.Offset.GetLocation().X) : 3.f;
 			Player->FailFlashlight(Duration);
+		}
+		break;
+	case EVGEventAction::DoorLock:
+	case EVGEventAction::DoorUnlock:
+		if (AVGDoor* Door = Cast<AVGDoor>(Target))
+		{
+			Door->SetLocked(Step.Action == EVGEventAction::DoorLock);
+		}
+		break;
+	case EVGEventAction::LampColor:
+		if (AVGLamp* Lamp = Cast<AVGLamp>(Target))
+		{
+			const FVector C = Step.Offset.GetScale3D();
+			Lamp->SetColor(FLinearColor(static_cast<float>(C.X), static_cast<float>(C.Y), static_cast<float>(C.Z)));
+		}
+		break;
+	case EVGEventAction::ShowMessage:
+		if (UVGLoopSubsystem* Loop = GetWorld()->GetSubsystem<UVGLoopSubsystem>())
+		{
+			const float Duration = Step.Offset.GetLocation().X > 0.1 ? static_cast<float>(Step.Offset.GetLocation().X) : 4.f;
+			Loop->ShowMessage(Step.Message, Duration);
 		}
 		break;
 	case EVGEventAction::FireTrigger:

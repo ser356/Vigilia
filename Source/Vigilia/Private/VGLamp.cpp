@@ -99,3 +99,9 @@ void AVGLamp::Tick(float DeltaSeconds)
 		bOn = bWasOn;
 	}
 }
+
+void AVGLamp::SetColor(FLinearColor Color)
+{
+	Light->bUseTemperature = false;
+	Light->SetLightColor(Color);
+}

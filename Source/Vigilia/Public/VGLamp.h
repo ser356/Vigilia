@@ -33,6 +33,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Vigilia|Lamp")
 	bool IsOn() const { return bOn; }
 
+	/** Tinte de la luz (desactiva la temperatura de color). */
+	UFUNCTION(BlueprintCallable, Category = "Vigilia|Lamp")
+	void SetColor(FLinearColor Color);
+
 	/** Configura la bombilla (lumenes, temperatura en Kelvin y posicion local). */
 	UFUNCTION(BlueprintCallable, Category = "Vigilia|Lamp")
 	void SetupLight(FVector RelativeLocation, float Lumens, float Temperature, float AttenuationRadius);

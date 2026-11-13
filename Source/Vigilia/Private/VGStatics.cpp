@@ -16,6 +16,14 @@ USoundAttenuation* UVGStatics::GetDefaultAttenuation()
 		Att->Attenuation.bAttenuate = true;
 		Att->Attenuation.FalloffDistance = 1500.f;
 		Att->Attenuation.AttenuationShapeExtents = FVector(140.f);
+		// Oclusion: a traves de paredes y puertas cerradas el sonido se apaga y pierde agudos.
+		Att->Attenuation.bEnableOcclusion = true;
+		Att->Attenuation.OcclusionTraceChannel = ECC_Visibility;
+		Att->Attenuation.OcclusionLowPassFilterFrequency = 700.f;
+		Att->Attenuation.OcclusionVolumeAttenuation = 0.35f;
+		Att->Attenuation.OcclusionInterpolationTime = 0.25f;
+		Att->Attenuation.bEnableReverbSend = true;
+
 		Att->AddToRoot();
 		Cached = Att;
 	}

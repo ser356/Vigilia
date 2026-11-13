@@ -78,6 +78,24 @@
    "height_cm": 24.0
   }
  },
+ "WoodenChair_01": {
+  "width_cm": 68.8,
+  "depth_cm": 65.8,
+  "height_cm": 227.4,
+  "centroid_off": [
+   0.0004,
+   -0.0858
+  ],
+  "top_off": [
+   0.002,
+   -0.4308
+  ],
+  "meshes": 1,
+  "materials": [
+   "WoodenChair_01"
+  ],
+  "front": "+Z"
+ },
  "book_encyclopedia_set_01": {
   "width_cm": 55.1,
   "depth_cm": 16.3,
@@ -173,6 +191,25 @@
   ],
   "front": "+Z"
  },
+ "electric_stove": {
+  "width_cm": 50.3,
+  "depth_cm": 64.8,
+  "height_cm": 85.9,
+  "centroid_off": [
+   -0.0085,
+   0.2289
+  ],
+  "top_off": [
+   0.0126,
+   0.1915
+  ],
+  "meshes": 19,
+  "materials": [
+   "electric_stove",
+   "electric_stove_glass"
+  ],
+  "front": "+Z"
+ },
  "fancy_picture_frame_01": {
   "width_cm": 60.3,
   "depth_cm": 2.0,
@@ -232,6 +269,25 @@
   ],
   "front": "+Z"
  },
+ "lightbulb_01": {
+  "width_cm": 6.0,
+  "depth_cm": 6.0,
+  "height_cm": 10.0,
+  "centroid_off": [
+   -0.0186,
+   0.0013
+  ],
+  "top_off": [
+   -0.0054,
+   0.0116
+  ],
+  "meshes": 1,
+  "materials": [
+   "lightbulb_01_glass",
+   "lightbulb_01_base"
+  ],
+  "front": "+Z"
+ },
  "mantel_clock_01": {
   "width_cm": 34.2,
   "depth_cm": 12.6,
@@ -248,6 +304,42 @@
   "materials": [
    "mantel_clock_01",
    "mantel_clock_01_glass"
+  ],
+  "front": "+Z"
+ },
+ "old_bed_frame": {
+  "width_cm": 90.5,
+  "depth_cm": 200.2,
+  "height_cm": 120.1,
+  "centroid_off": [
+   0.0058,
+   0.0026
+  ],
+  "top_off": [
+   0.0,
+   -0.4854
+  ],
+  "meshes": 1,
+  "materials": [
+   "old_bed_frame"
+  ],
+  "front": "+Z"
+ },
+ "ornate_mirror_01": {
+  "width_cm": 48.6,
+  "depth_cm": 2.6,
+  "height_cm": 74.4,
+  "centroid_off": [
+   0.0002,
+   0.0869
+  ],
+  "top_off": [
+   0.0002,
+   0.1112
+  ],
+  "meshes": 1,
+  "materials": [
+   "ornate_mirror_01"
   ],
   "front": "+Z"
  },
@@ -346,6 +438,26 @@
   ],
   "front": "+X"
  },
+ "vintage_cabinet_01": {
+  "width_cm": 202.2,
+  "depth_cm": 67.0,
+  "height_cm": 223.5,
+  "centroid_off": [
+   0.0062,
+   0.1439
+  ],
+  "top_off": [
+   0.0201,
+   -0.0262
+  ],
+  "meshes": 8,
+  "materials": [
+   "vintage_cabinet_01_a",
+   "vintage_cabinet_01_b",
+   "vintage_cabinet_01_glass"
+  ],
+  "front": "+Z"
+ },
  "vintage_grandfather_clock_01": {
   "width_cm": 62.6,
   "depth_cm": 42.7,
@@ -362,6 +474,24 @@
   "materials": [
    "vintage_grandfather_clock_01",
    "vintage_grandfather_clock_01_glass"
+  ],
+  "front": "+Z"
+ },
+ "wooden_table_02": {
+  "width_cm": 113.4,
+  "depth_cm": 70.6,
+  "height_cm": 80.0,
+  "centroid_off": [
+   -0.0,
+   -0.0
+  ],
+  "top_off": [
+   -0.0,
+   -0.0
+  ],
+  "meshes": 1,
+  "materials": [
+   "wooden_table_02"
   ],
   "front": "+Z"
  }

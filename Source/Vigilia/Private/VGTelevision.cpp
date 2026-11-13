@@ -30,6 +30,14 @@ AVGTelevision::AVGTelevision()
 	LoopAudio->AttenuationOverrides.bAttenuate = true;
 	LoopAudio->AttenuationOverrides.FalloffDistance = 900.f;
 	LoopAudio->AttenuationOverrides.AttenuationShapeExtents = FVector(60.f);
+	// Oclusion: a traves de paredes y puertas cerradas el sonido se apaga y pierde agudos.
+	LoopAudio->AttenuationOverrides.bEnableOcclusion = true;
+	LoopAudio->AttenuationOverrides.OcclusionTraceChannel = ECC_Visibility;
+	LoopAudio->AttenuationOverrides.OcclusionLowPassFilterFrequency = 700.f;
+	LoopAudio->AttenuationOverrides.OcclusionVolumeAttenuation = 0.35f;
+	LoopAudio->AttenuationOverrides.OcclusionInterpolationTime = 0.25f;
+	LoopAudio->AttenuationOverrides.bEnableReverbSend = true;
+
 
 	Prompt = NSLOCTEXT("Vigilia", "TV", "Televisor");
 }

@@ -633,6 +633,241 @@
    "collision": "box",
    "max_tex": 1024,
    "size_cm": 45
+  },
+  "bed": {
+   "category": "Furniture/Bedroom",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Residential European Rural Furniture Bed Wood Single",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/89b48726-c79c-460a-8aa1-5bbd2eaa7fbd",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    },
+    {
+     "type": "polyhaven",
+     "id": "old_bed_frame",
+     "res": "2k",
+     "url": "https://polyhaven.com/a/old_bed_frame",
+     "license": "CC0"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 2048,
+   "size_cm": 200
+  },
+  "wardrobe": {
+   "category": "Furniture/Bedroom",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Historic Mansion Furniture Wardrobe Wood Large",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/5e55e9c5-f523-4ce2-a2e1-e2f6af0f68cc",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    },
+    {
+     "type": "fab",
+     "title": "Historic Mansion Furniture Wardrobe Wood Medium",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/c04c8430-2f31-45d3-a312-53928ac2caaf",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    },
+    {
+     "type": "polyhaven",
+     "id": "vintage_cabinet_01",
+     "res": "2k",
+     "url": "https://polyhaven.com/a/vintage_cabinet_01",
+     "license": "CC0"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 2048,
+   "size_cm": 200
+  },
+  "nightstand": {
+   "category": "Furniture/Bedroom",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Historic Miscellaneous Cabinet Wood Old 01",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/45eb7813-770c-4d59-8ac4-7c1d3477aecf",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 1024,
+   "size_cm": 60
+  },
+  "kitchen_cabinet": {
+   "category": "Furniture/Kitchen",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Urban Miscellaneous Cabinet Kitchen Wood Worn",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/ca1b70b5-3002-4326-887f-b45f8df2553c",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 2048,
+   "size_cm": 110
+  },
+  "stove": {
+   "category": "Furniture/Kitchen",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "electric_stove",
+     "res": "2k",
+     "url": "https://polyhaven.com/a/electric_stove",
+     "license": "CC0"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 2048,
+   "size_cm": 90
+  },
+  "kitchen_table": {
+   "category": "Furniture/Kitchen",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Wooden Table",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/5d0927ad-e4ab-4962-95dd-fe7beeb3be78",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    },
+    {
+     "type": "polyhaven",
+     "id": "wooden_table_02",
+     "res": "2k",
+     "url": "https://polyhaven.com/a/wooden_table_02",
+     "license": "CC0"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 1024,
+   "size_cm": 120
+  },
+  "kitchen_chair": {
+   "category": "Furniture/Kitchen",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Wooden Chair",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/b0214351-de55-4a34-a4d2-bade63e73cb1",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    },
+    {
+     "type": "polyhaven",
+     "id": "WoodenChair_01",
+     "res": "2k",
+     "url": "https://polyhaven.com/a/WoodenChair_01",
+     "license": "CC0"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 1024,
+   "size_cm": 90
+  },
+  "bathtub": {
+   "category": "Furniture/Bathroom",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Urban Shanty Town Bathtub Mixed Weathered",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/4388472c-603a-4862-8e79-aec022db3964",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 2048,
+   "size_cm": 170
+  },
+  "towel": {
+   "category": "Decor/Props",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Urban Trash Towel Dirty Fabric Old",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/e9f9bbd2-588b-403d-80be-e5deadf33ac4",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    }
+   ],
+   "collision": "none",
+   "max_tex": 1024,
+   "size_cm": 50
+  },
+  "bath_mirror": {
+   "category": "Decor",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "ornate_mirror_01",
+     "res": "2k",
+     "url": "https://polyhaven.com/a/ornate_mirror_01",
+     "license": "CC0"
+    }
+   ],
+   "collision": "none",
+   "max_tex": 1024,
+   "size_cm": 90
+  },
+  "fluorescent": {
+   "category": "Lighting",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Fluorescent Ceiling Lamp",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/43a84e48-6665-46bb-b980-7fc6124b5c6a",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    }
+   ],
+   "collision": "none",
+   "max_tex": 1024,
+   "size_cm": 120
+  },
+  "bulb": {
+   "category": "Lighting",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "lightbulb_01",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/lightbulb_01",
+     "license": "CC0"
+    }
+   ],
+   "collision": "none",
+   "max_tex": 512,
+   "size_cm": 11
   }
  },
  "surfaces": {
@@ -755,6 +990,67 @@
     }
    ],
    "tile_cm": 180
+  },
+  "tile_wall": {
+   "sources": [
+    {
+     "type": "polyhaven_texture",
+     "id": "long_white_tiles",
+     "res": "2k",
+     "url": "https://polyhaven.com/a/long_white_tiles",
+     "license": "CC0"
+    },
+    {
+     "type": "polyhaven_texture",
+     "id": "square_tiled_wall",
+     "res": "2k",
+     "url": "https://polyhaven.com/a/square_tiled_wall",
+     "license": "CC0"
+    }
+   ],
+   "tile_cm": 150
+  },
+  "tile_floor": {
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Dirty Floor Tiles",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/2eeb0644-6cdc-473c-8ea4-95cb6ebb8e6d",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "material"
+    },
+    {
+     "type": "polyhaven_texture",
+     "id": "old_linoleum_flooring_01",
+     "res": "2k",
+     "url": "https://polyhaven.com/a/old_linoleum_flooring_01",
+     "license": "CC0"
+    }
+   ],
+   "tile_cm": 150
+  },
+  "bedroom_wall": {
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Old Wallpaper",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/b58a953a-eadb-4a7b-9de1-719bce7c7590",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "material"
+    },
+    {
+     "type": "polyhaven_texture",
+     "id": "decrepit_wallpaper",
+     "res": "2k",
+     "url": "https://polyhaven.com/a/decrepit_wallpaper",
+     "license": "CC0"
+    }
+   ],
+   "tile_cm": 200
   }
  }
 }

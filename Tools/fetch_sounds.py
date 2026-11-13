@@ -61,6 +61,9 @@ SOUNDS = {
     "phone_voice": (["heavy breathing", "breathing", "whisper"], 4, 30),
     "breath": (["breath", "exhale"], 0.8, 4),
     "whisper": (["whisper", "whispering", "creepy whisper"], 1.0, 6),
+    "water_drip_loop": (["water drip", "dripping water", "drip"], 6, 60),
+    "fluorescent_hum_loop": (["fluorescent hum", "fluorescent light", "electrical hum"], 5, 60),
+    "fridge_hum_loop": (["refrigerator hum", "fridge hum", "fridge"], 8, 90),
     "dread_drone_loop": (["dark drone", "horror drone", "low drone", "drone"], 15, 180),
 }
 
@@ -165,6 +168,29 @@ def slice_steps(path, out_paths, step_len=0.38):
     return len(peaks)
 
 
+def trim_silence(path, threshold=0.012, pre_roll=0.012, fade=0.06):
+    """Quita el silencio del principio y del final (los sonidos de Freesound suelen traerlo) y suaviza la cola."""
+    with wave.open(path, "rb") as fh:
+        params = fh.getparams()
+        data = array("h", fh.readframes(fh.getnframes()))
+    if not data:
+        return
+    limit = int(threshold * 32767)
+    first = next((i for i, v in enumerate(data) if abs(v) > limit), 0)
+    last = next((i for i in range(len(data) - 1, -1, -1) if abs(data[i]) > limit), len(data) - 1)
+    rate = params.framerate
+    start = max(0, first - int(pre_roll * rate))
+    end = min(len(data), last + int(0.08 * rate))
+    data = data[start:end]
+    n = min(int(fade * rate), len(data))
+    for j in range(n):
+        idx = len(data) - 1 - j
+        data[idx] = int(data[idx] * j / float(n))
+    with wave.open(path, "wb") as fh:
+        fh.setparams(params)
+        fh.writeframes(data.tobytes())
+
+
 def normalize(path, peak=0.85):
     with wave.open(path, "rb") as fh:
         params = fh.getparams()
@@ -240,6 +266,8 @@ def main():
             else:
                 dst = os.path.join(AUDIO, name + ".wav")
                 convert(src, dst)
+                if not name.endswith("_loop"):
+                    trim_silence(dst)
                 normalize(dst)
                 if name.endswith("_loop"):
                     smooth_loop(dst)

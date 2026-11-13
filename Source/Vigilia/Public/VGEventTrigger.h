@@ -36,7 +36,13 @@ enum class EVGEventAction : uint8
 	/** Gira el Target (solo en horizontal) para que mire al jugador. */
 	FacePlayer,
 	/** La linterna del jugador parpadea y se apaga. Offset.X = duracion en segundos (por defecto 3). */
-	FlashlightFail
+	FlashlightFail,
+	DoorLock,
+	DoorUnlock,
+	/** Cambia el color de una lampara: Offset.Scale = RGB. */
+	LampColor,
+	/** Muestra Message en pantalla. Offset.X = duracion (por defecto 4 s). */
+	ShowMessage
 };
 
 USTRUCT(BlueprintType)
@@ -58,6 +64,9 @@ struct FVGEventStep
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia")
 	FTransform Offset;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia", meta = (MultiLine = true))
+	FText Message;
 
 	/** Espera a que el jugador NO este mirando al Target para ejecutarse (reintenta hasta 40 s). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia")
@@ -82,6 +91,10 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Vigilia|Events")
 	void SetBoxExtent(FVector Extent);
+
+	/** Paso con texto (para ShowMessage). */
+	UFUNCTION(BlueprintCallable, Category = "Vigilia|Events")
+	void AddMessageStep(float Delay, const FText& Text, float Duration);
 
 	/** Fuerza el evento (tambien util desde consola o Blueprints). */
 	UFUNCTION(BlueprintCallable, Category = "Vigilia|Events")
@@ -112,6 +125,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Events")
 	bool bRequirePlayerInside = false;
 
+	/** Si es >= 0, se dispara al completar esa vuelta del bucle del pasillo (1 = primera vuelta). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Events")
+	int32 RequiredLoop = -1;
+
 	/** Si es > 0, tras dispararse se vuelve a disparar cada N segundos (comportamientos persistentes). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Events")
 	float RepeatInterval = 0.f;
@@ -134,6 +151,9 @@ private:
 	void ExecuteStep(int32 Index);
 	void ExecuteStepWhenUnseen(int32 Index, int32 Attempt);
 	void TryAutoFire();
+
+	UFUNCTION()
+	void HandleLoop(int32 LoopCount);
 	bool IsPlayerInside() const;
 	bool IsSeenByPlayer(const AActor* Target) const;
 

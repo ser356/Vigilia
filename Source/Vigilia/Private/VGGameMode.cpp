@@ -2,6 +2,7 @@
 #include "VGPlayerCharacter.h"
 #include "VGInteractionComponent.h"
 #include "VGExaminable.h"
+#include "VGLoopSubsystem.h"
 #include "Engine/Canvas.h"
 #include "Engine/Engine.h"
 #include "Engine/Font.h"
@@ -34,6 +35,17 @@ void AVGHUD::DrawHUD()
 	if (!Player || !Canvas)
 	{
 		return;
+	}
+
+	if (const UVGLoopSubsystem* Loop = GetWorld()->GetSubsystem<UVGLoopSubsystem>())
+	{
+		float Alpha = 0.f;
+		const FText Text = Loop->GetMessage(Alpha);
+		if (!Text.IsEmpty() && Alpha > 0.f)
+		{
+			const float Scale = FMath::Max(Canvas->ClipY / 1080.f, 0.5f);
+			DrawCentered(Text.ToString(), Canvas->ClipY * 0.45f, 1.6f * Scale, FLinearColor(0.85f, 0.82f, 0.78f, Alpha));
+		}
 	}
 
 	const float CX = Canvas->ClipX * 0.5f;

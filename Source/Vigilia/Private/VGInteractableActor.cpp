@@ -24,6 +24,14 @@ AVGInteractableActor::AVGInteractableActor()
 	Audio->AttenuationOverrides.bAttenuate = true;
 	Audio->AttenuationOverrides.FalloffDistance = 1400.f;
 	Audio->AttenuationOverrides.AttenuationShapeExtents = FVector(120.f);
+	// Oclusion: a traves de paredes y puertas cerradas el sonido se apaga y pierde agudos.
+	Audio->AttenuationOverrides.bEnableOcclusion = true;
+	Audio->AttenuationOverrides.OcclusionTraceChannel = ECC_Visibility;
+	Audio->AttenuationOverrides.OcclusionLowPassFilterFrequency = 700.f;
+	Audio->AttenuationOverrides.OcclusionVolumeAttenuation = 0.35f;
+	Audio->AttenuationOverrides.OcclusionInterpolationTime = 0.25f;
+	Audio->AttenuationOverrides.bEnableReverbSend = true;
+
 
 	Prompt = NSLOCTEXT("Vigilia", "DefaultPrompt", "Usar");
 }
