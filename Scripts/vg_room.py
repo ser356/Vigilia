@@ -756,7 +756,7 @@ def build_lighting(info):
     comp = fog.get_component_by_class(unreal.ExponentialHeightFogComponent)
     safe_set(comp, "fog_density", 0.012)
     safe_set(comp, "fog_height_falloff", 0.05)
-    safe_set(comp, "volumetric_fog", True)
+    safe_set(comp, "enable_volumetric_fog", True)
     safe_set(comp, "volumetric_fog_scattering_distribution", 0.45)
     safe_set(comp, "volumetric_fog_extinction_scale", 0.6)
 
