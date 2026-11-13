@@ -21,6 +21,7 @@ HX, HY, H, T = 260.0, 205.0, 255.0, 20.0
 TW = 10.0
 CORR_X0, CORR_X1, CORR_Y0, CORR_Y1 = -720.0, 720.0, -355.0, -HY - T   # pasillo de 14 m
 HOUSE_BOTTOM = -735.0
+MIN_DOOR_W = 88.0   # ancho minimo de hoja: si el modelo es mas estrecho se ensancha
 JAMB = 6.0   # ancho de las jambas de las puertas
 
 actor_sub = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
@@ -408,6 +409,10 @@ def build_shell(res, mats):
     if door_res:
         door_w, door_t, door_h = horizontal_dims(door_res)
         door_h = min(door_h, H - 6.0)
+        # Paso libre minimo: con la hoja abierta (grosor + pomo) el jugador necesita ~80 cm.
+        if door_w < MIN_DOOR_W:
+            STATE["door_scale"] = MIN_DOOR_W / door_w
+            door_w = MIN_DOOR_W
     else:
         door_w, door_t, door_h = 82.5, 4.0, 203.0
     door_x0 = 250.0 - 12.0 - door_w
@@ -470,6 +475,9 @@ def build_door(res, mats, info):
     if door_res:
         door.setup_door_mesh(group_for(door_res).main)
         STATE["used"]["door"] = door_res
+        if STATE.get("door_scale", 1.0) != 1.0:
+            # Escala en el eje local Y = ancho de la hoja (la bisagra esta en el origen y no se mueve).
+            door.set_actor_scale3d(V(1.0, STATE["door_scale"], 1.0))
     else:
         # Prototipo: hoja lisa hasta que se anada la puerta de Megascans desde Fab.
         door.setup_door_mesh(eal.load_asset("/Engine/BasicShapes/Cube"))
@@ -1376,6 +1384,8 @@ def spawn_house_door(key, axis, along0, wall_center, res, mats, locked=False):
     door_res = res.get("door")
     if door_res:
         door.setup_door_mesh(group_for(door_res).main)
+        if STATE.get("door_scale", 1.0) != 1.0:
+            door.set_actor_scale3d(V(1.0, STATE["door_scale"], 1.0))
     else:
         door.setup_door_mesh(eal.load_asset("/Engine/BasicShapes/Cube"))
         mesh = door.get_editor_property("mesh")
@@ -1426,7 +1436,7 @@ def build_house(res, mats, info, out):
     if res.get("door"):
         w, _t, h = horizontal_dims(res["door"])
         if 60.0 <= w <= 110.0:
-            DOOR_W = w
+            DOOR_W = max(w, MIN_DOOR_W)
         if 180.0 <= h <= H - 25.0:
             DOOR_H = h
 
@@ -1713,6 +1723,7 @@ def build():
     else:
         STATE["overrides"] = load_json("layout_overrides.json", {}) or {}
     STATE["unverified"], STATE["blockouts"], STATE["used"] = [], [], {}
+    STATE["door_scale"] = 1.0
     del WARNINGS[:]
 
     with unreal.ScopedSlowTask(8, "Vigilia: construyendo el salon") as task:
