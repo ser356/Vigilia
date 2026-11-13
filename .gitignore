@@ -1,0 +1,24 @@
+# Unreal Engine
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+Build/
+.vs/
+.vscode/
+.idea/
+*.xcodeproj
+*.xcworkspace
+*.sln
+*.VC.db
+*.opensdf
+*.sdf
+*.suo
+.DS_Store
+__pycache__/
+
+# Descargas reproducibles (se regeneran con Tools/setup_mac.sh)
+SourceAssets/PolyHaven/
+
+# Contenido de Fab/Megascans: se obtiene con tu cuenta de Epic, no se redistribuye en el repositorio
+Content/Fab/

@@ -1,0 +1,663 @@
+{
+ "version": 1,
+ "slots": {
+  "sofa": {
+   "category": "Furniture/Seating",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Urban Office Equipment Couch Mixed Large",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/0e9ad343-fa31-4dc6-a1d6-a4dfdf9fd05b",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    },
+    {
+     "type": "polyhaven",
+     "id": "sofa_02",
+     "res": "2k",
+     "url": "https://polyhaven.com/a/sofa_02",
+     "license": "CC0"
+    }
+   ],
+   "collision": "ndop",
+   "max_tex": 2048,
+   "front": "seat",
+   "required": true
+  },
+  "armchair": {
+   "category": "Furniture/Seating",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Urban Office Equipment Couch Mixed Small",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/08224a27-3536-42ea-8b44-4ff7f1e7ad68",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    },
+    {
+     "type": "polyhaven",
+     "id": "ArmChair_01",
+     "res": "2k",
+     "url": "https://polyhaven.com/a/ArmChair_01",
+     "license": "CC0"
+    }
+   ],
+   "collision": "ndop",
+   "max_tex": 2048,
+   "front": "seat"
+  },
+  "coffee_table": {
+   "category": "Furniture/Tables",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Wooden Table",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/0ab818bb-aefd-4437-ac2b-b38ec86d22c1",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    },
+    {
+     "type": "polyhaven",
+     "id": "CoffeeTable_01",
+     "res": "2k",
+     "url": "https://polyhaven.com/a/CoffeeTable_01",
+     "license": "CC0"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 2048,
+   "required": true
+  },
+  "tv_stand": {
+   "category": "Furniture/Storage",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Urban Office Equipment Drawer Wood Old 02",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/9fadc46f-c515-452b-8701-24a9ef5ab984",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    },
+    {
+     "type": "polyhaven",
+     "id": "ClassicConsole_01",
+     "res": "2k",
+     "url": "https://polyhaven.com/a/ClassicConsole_01",
+     "license": "CC0"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 2048,
+   "required": true
+  },
+  "side_table": {
+   "category": "Furniture/Tables",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Wooden Table With Drawer",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/176a4194-9754-45c7-8f83-e54de16254bd",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    },
+    {
+     "type": "polyhaven",
+     "id": "side_table_01",
+     "res": "2k",
+     "url": "https://polyhaven.com/a/side_table_01",
+     "license": "CC0"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 1024
+  },
+  "floor_lamp": {
+   "category": "Lighting",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Wooden Floor Lamp",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/a8534003-b8e6-4eea-bf9e-9eecd9fedc47",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    },
+    {
+     "type": "polyhaven",
+     "id": "desk_lamp_arm_01",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/desk_lamp_arm_01",
+     "license": "CC0"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 1024,
+   "required": true
+  },
+  "television": {
+   "category": "Electronics",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Retro CRT Television - 90s Style",
+     "seller": "Mad Interactive Studio",
+     "url": "https://www.fab.com/listings/8e0eed31-cfde-4771-b869-777326687825",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    },
+    {
+     "type": "polyhaven",
+     "id": "Television_01",
+     "res": "2k",
+     "url": "https://polyhaven.com/a/Television_01",
+     "license": "CC0"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 2048,
+   "required": true
+  },
+  "grandfather_clock": {
+   "category": "Decor",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Historic Mansion Decorative Clock Mixed Old",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/9e3c20e3-ff5e-4904-945a-fec86c4c271f",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    },
+    {
+     "type": "polyhaven",
+     "id": "vintage_grandfather_clock_01",
+     "res": "2k",
+     "url": "https://polyhaven.com/a/vintage_grandfather_clock_01",
+     "license": "CC0"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 2048
+  },
+  "radiator": {
+   "category": "Architecture",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Urban Office Equipment Radiator Metal Weathered",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/db2f94c0-af74-4dc5-835a-3f99ce0a0401",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 1024
+  },
+  "door": {
+   "category": "Architecture",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Old Wooden Door",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/df0f97f7-8482-4a67-b31c-a4c9fb5db017",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 2048,
+   "required": true
+  },
+  "window": {
+   "category": "Architecture",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Urban Miscellaneous Window Interior Mixed Weathered 03",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/26a02cd8-fa99-4d25-bde1-5d22e4b3a0bc",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 2048,
+   "required": true
+  },
+  "frame_large": {
+   "category": "Decor/Frames",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Decorative Picture Frame",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/e2593e52-c877-4775-aafe-a5ca8336117a",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    },
+    {
+     "type": "polyhaven",
+     "id": "fancy_picture_frame_01",
+     "res": "2k",
+     "url": "https://polyhaven.com/a/fancy_picture_frame_01",
+     "license": "CC0"
+    }
+   ],
+   "collision": "none",
+   "max_tex": 1024
+  },
+  "frame_medium": {
+   "category": "Decor/Frames",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Historic Mansion Decorative Frame Wood Old 02",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/e257690d-9c3b-47a1-8a5c-9dbd90a52e8a",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    },
+    {
+     "type": "polyhaven",
+     "id": "hanging_picture_frame_02",
+     "res": "2k",
+     "url": "https://polyhaven.com/a/hanging_picture_frame_02",
+     "license": "CC0"
+    }
+   ],
+   "collision": "none",
+   "max_tex": 1024
+  },
+  "frame_oval": {
+   "category": "Decor/Frames",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "hanging_picture_frame_03",
+     "res": "2k",
+     "url": "https://polyhaven.com/a/hanging_picture_frame_03",
+     "license": "CC0"
+    }
+   ],
+   "collision": "none",
+   "max_tex": 1024
+  },
+  "frame_standing": {
+   "category": "Decor/Frames",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "standing_picture_frame_02",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/standing_picture_frame_02",
+     "license": "CC0"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 512
+  },
+  "frame_small": {
+   "category": "Decor/Frames",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Wooden Picture Frame",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/54e25394-4ffb-499f-be70-479e3392531b",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    },
+    {
+     "type": "polyhaven",
+     "id": "standing_picture_frame_01",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/standing_picture_frame_01",
+     "license": "CC0"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 512
+  },
+  "mantel_clock": {
+   "category": "Decor",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "mantel_clock_01",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/mantel_clock_01",
+     "license": "CC0"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 1024
+  },
+  "books": {
+   "category": "Decor/Props",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Book",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/43a26a5c-e89f-42c9-ae63-5cc195e0294a",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    },
+    {
+     "type": "polyhaven",
+     "id": "book_encyclopedia_set_01",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/book_encyclopedia_set_01",
+     "license": "CC0"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 1024
+  },
+  "book_old": {
+   "category": "Decor/Props",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Historic Miscellaneous Book Mixed Old 10",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/f611a3c1-cd05-4d6b-9c1c-0ae47b1aef1a",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 512
+  },
+  "plant": {
+   "category": "Decor",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "potted_plant_02",
+     "res": "2k",
+     "url": "https://polyhaven.com/a/potted_plant_02",
+     "license": "CC0"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 2048
+  },
+  "vase": {
+   "category": "Decor/Props",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Clay Vase",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/32ea3271-6c7e-438b-913c-b9b106f1bec6",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    },
+    {
+     "type": "polyhaven",
+     "id": "ceramic_vase_03",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/ceramic_vase_03",
+     "license": "CC0"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 512
+  },
+  "ashtray": {
+   "category": "Decor/Props",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Wooden Ashtray",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/45b20262-ff5e-421c-b402-214ed0e16b71",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 512
+  },
+  "cushion": {
+   "category": "Decor/Props",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Old Cushion",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/b75617f7-7f30-4e29-a55f-23540e4dfe27",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    }
+   ],
+   "collision": "none",
+   "max_tex": 1024
+  },
+  "newspaper": {
+   "category": "Decor/Props",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Urban Trash Newspaper Crumpled 01",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/30abb9f7-cc33-4139-82a8-11a62703a3e3",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    }
+   ],
+   "collision": "none",
+   "max_tex": 512
+  },
+  "toy_bear": {
+   "category": "Decor/Props",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Wooden Toy Bear",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/9a1f22bd-7168-4a25-be4b-60141761c7dc",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 512
+  },
+  "cassette_player": {
+   "category": "Electronics",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "cassette_player",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/cassette_player",
+     "license": "CC0"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 1024
+  },
+  "boombox": {
+   "category": "Electronics",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "boombox",
+     "res": "2k",
+     "url": "https://polyhaven.com/a/boombox",
+     "license": "CC0"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 2048
+  },
+  "telephone": {
+   "category": "Electronics",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Nortel Vista 200 Corded Landline Telephone",
+     "seller": "JordanFry3D",
+     "url": "https://www.fab.com/listings/6ee9fcce-4b89-4436-8349-5c006462af10",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 1024
+  }
+ },
+ "surfaces": {
+  "wall": {
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Old Decorative Wallpaper",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/106a4c05-9779-4b88-9705-d28c3c540f89",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "material"
+    },
+    {
+     "type": "polyhaven_texture",
+     "id": "beige_wall_001",
+     "res": "2k",
+     "url": "https://polyhaven.com/a/beige_wall_001",
+     "license": "CC0"
+    }
+   ],
+   "tile_cm": 200,
+   "required": true
+  },
+  "ceiling": {
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Plaster Wall",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/bfc33074-f69b-4096-8d03-04d4af159622",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "material"
+    },
+    {
+     "type": "polyhaven_texture",
+     "id": "white_plaster_02",
+     "res": "2k",
+     "url": "https://polyhaven.com/a/white_plaster_02",
+     "license": "CC0"
+    }
+   ],
+   "tile_cm": 250,
+   "required": true
+  },
+  "floor": {
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Basket Weave Parquet",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/5c1f37f8-8281-42a6-9718-22f041578dc1",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "material"
+    },
+    {
+     "type": "polyhaven_texture",
+     "id": "rectangular_parquet",
+     "res": "2k",
+     "url": "https://polyhaven.com/a/rectangular_parquet",
+     "license": "CC0"
+    }
+   ],
+   "tile_cm": 200,
+   "required": true
+  },
+  "rug": {
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Old Carpet",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/f6a088c6-6325-41fe-804f-86c572834b7a",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "material"
+    },
+    {
+     "type": "polyhaven_texture",
+     "id": "dirty_carpet",
+     "res": "2k",
+     "url": "https://polyhaven.com/a/dirty_carpet",
+     "license": "CC0"
+    }
+   ],
+   "tile_cm": 150
+  },
+  "curtain_fabric": {
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Furniture Fabric",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/83ff7c89-d525-4fae-bd8c-4f18dac106a8",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "material"
+    },
+    {
+     "type": "polyhaven_texture",
+     "id": "quatrefoil_jacquard_fabric",
+     "res": "2k",
+     "url": "https://polyhaven.com/a/quatrefoil_jacquard_fabric",
+     "license": "CC0"
+    }
+   ],
+   "tile_cm": 120
+  },
+  "trim_wood": {
+   "sources": [
+    {
+     "type": "polyhaven_texture",
+     "id": "wood_floor_worn",
+     "res": "2k",
+     "url": "https://polyhaven.com/a/wood_floor_worn",
+     "license": "CC0"
+    }
+   ],
+   "tile_cm": 180
+  }
+ }
+}

@@ -1,0 +1,368 @@
+{
+ "ArmChair_01": {
+  "width_cm": 84.8,
+  "depth_cm": 76.6,
+  "height_cm": 106.5,
+  "centroid_off": [
+   -0.0028,
+   0.0191
+  ],
+  "top_off": [
+   -0.0105,
+   -0.4182
+  ],
+  "meshes": 1,
+  "materials": [
+   "Armchair_01"
+  ],
+  "front": "+Z"
+ },
+ "ClassicConsole_01": {
+  "width_cm": 154.3,
+  "depth_cm": 58.9,
+  "height_cm": 94.9,
+  "centroid_off": [
+   -0.0001,
+   0.0744
+  ],
+  "top_off": [
+   -0.0,
+   0.1338
+  ],
+  "meshes": 1,
+  "materials": [
+   "ClassicConsole_01"
+  ],
+  "front": "+Z"
+ },
+ "CoffeeTable_01": {
+  "width_cm": 154.0,
+  "depth_cm": 97.3,
+  "height_cm": 52.3,
+  "centroid_off": [
+   0.0003,
+   0.1355
+  ],
+  "top_off": [
+   0.0031,
+   0.0375
+  ],
+  "meshes": 1,
+  "materials": [
+   "CoffeeTable_01"
+  ],
+  "front": "+Z"
+ },
+ "Television_01": {
+  "width_cm": 60.0,
+  "depth_cm": 47.1,
+  "height_cm": 45.7,
+  "centroid_off": [
+   0.0658,
+   0.1388
+  ],
+  "top_off": [
+   -0.0164,
+   -0.1085
+  ],
+  "meshes": 1,
+  "materials": [
+   "Television_01"
+  ],
+  "front": "+Z",
+  "screen": {
+   "center_x_cm": -6.6,
+   "center_height_cm": 25.8,
+   "inset_from_front_cm": 1.9,
+   "width_cm": 33.0,
+   "height_cm": 24.0
+  }
+ },
+ "book_encyclopedia_set_01": {
+  "width_cm": 55.1,
+  "depth_cm": 16.3,
+  "height_cm": 23.7,
+  "centroid_off": [
+   -0.0093,
+   0.2593
+  ],
+  "top_off": [
+   -0.0112,
+   0.2444
+  ],
+  "meshes": 20,
+  "materials": [
+   "book_encyclopedia_set_01_cover",
+   "book_encyclopedia_set_01_paper"
+  ],
+  "front": "+Z"
+ },
+ "boombox": {
+  "width_cm": 72.4,
+  "depth_cm": 18.6,
+  "height_cm": 47.0,
+  "centroid_off": [
+   0.0277,
+   0.1107
+  ],
+  "top_off": [
+   0.3986,
+   -0.4113
+  ],
+  "meshes": 1,
+  "materials": [
+   "boombox",
+   "boombox_speakers"
+  ],
+  "front": "+Z"
+ },
+ "cassette_player": {
+  "width_cm": 12.9,
+  "depth_cm": 4.9,
+  "height_cm": 23.7,
+  "centroid_off": [
+   -0.0568,
+   0.1629
+  ],
+  "top_off": [
+   0.1993,
+   0.0372
+  ],
+  "meshes": 2,
+  "materials": [
+   "cassette_player_body",
+   "cassette_player_flap",
+   "cassette_player_tape"
+  ],
+  "front": "+Z"
+ },
+ "ceramic_vase_03": {
+  "width_cm": 11.2,
+  "depth_cm": 11.2,
+  "height_cm": 41.4,
+  "centroid_off": [
+   0.0024,
+   -0.0029
+  ],
+  "top_off": [
+   0.0209,
+   -0.0075
+  ],
+  "meshes": 1,
+  "materials": [
+   "ceramic_vase_03"
+  ],
+  "front": "+Z"
+ },
+ "desk_lamp_arm_01": {
+  "width_cm": 20.2,
+  "depth_cm": 61.4,
+  "height_cm": 89.3,
+  "centroid_off": [
+   0.1041,
+   -0.0861
+  ],
+  "top_off": [
+   0.1142,
+   -0.2513
+  ],
+  "meshes": 1,
+  "materials": [
+   "desk_lamp_arm_01",
+   "desk_lamp_arm_01_light"
+  ],
+  "front": "+Z"
+ },
+ "fancy_picture_frame_01": {
+  "width_cm": 60.3,
+  "depth_cm": 2.0,
+  "height_cm": 46.4,
+  "centroid_off": [
+   -0.0,
+   -0.0257
+  ],
+  "top_off": [
+   -0.0015,
+   -0.0225
+  ],
+  "meshes": 2,
+  "materials": [
+   "fancy_picture_frame_01",
+   "fancy_picture_frame_01_canvas"
+  ],
+  "front": "+Z"
+ },
+ "hanging_picture_frame_02": {
+  "width_cm": 75.2,
+  "depth_cm": 3.3,
+  "height_cm": 50.0,
+  "centroid_off": [
+   -0.0002,
+   -0.1977
+  ],
+  "top_off": [
+   -0.0001,
+   -0.0912
+  ],
+  "meshes": 1,
+  "materials": [
+   "hanging_picture_frame_02_artwork",
+   "hanging_picture_frame_02",
+   "hanging_picture_frame_02_glass"
+  ],
+  "front": "+Z"
+ },
+ "hanging_picture_frame_03": {
+  "width_cm": 38.5,
+  "depth_cm": 3.2,
+  "height_cm": 50.2,
+  "centroid_off": [
+   -0.0003,
+   0.0073
+  ],
+  "top_off": [
+   -0.0008,
+   0.014
+  ],
+  "meshes": 2,
+  "materials": [
+   "hanging_picture_frame_03",
+   "hanging_picture_frame_03_artwork",
+   "hanging_picture_frame_03_glass"
+  ],
+  "front": "+Z"
+ },
+ "mantel_clock_01": {
+  "width_cm": 34.2,
+  "depth_cm": 12.6,
+  "height_cm": 16.0,
+  "centroid_off": [
+   0.0034,
+   0.2541
+  ],
+  "top_off": [
+   -0.0001,
+   0.2543
+  ],
+  "meshes": 2,
+  "materials": [
+   "mantel_clock_01",
+   "mantel_clock_01_glass"
+  ],
+  "front": "+Z"
+ },
+ "potted_plant_02": {
+  "width_cm": 70.1,
+  "depth_cm": 65.7,
+  "height_cm": 84.1,
+  "centroid_off": [
+   0.0545,
+   0.1314
+  ],
+  "top_off": [
+   -0.0694,
+   -0.1077
+  ],
+  "meshes": 3,
+  "materials": [
+   "potted_plant_02_pot",
+   "potted_plant_02_leaves"
+  ],
+  "front": "+Z"
+ },
+ "side_table_01": {
+  "width_cm": 55.0,
+  "depth_cm": 45.0,
+  "height_cm": 55.1,
+  "centroid_off": [
+   0.0,
+   -0.0001
+  ],
+  "top_off": [
+   0.0,
+   -0.0
+  ],
+  "meshes": 1,
+  "materials": [
+   "side_table_01"
+  ],
+  "front": "+Z"
+ },
+ "sofa_02": {
+  "width_cm": 180.7,
+  "depth_cm": 81.8,
+  "height_cm": 70.9,
+  "centroid_off": [
+   -0.0,
+   0.1489
+  ],
+  "top_off": [
+   0.0,
+   -0.0261
+  ],
+  "meshes": 2,
+  "materials": [
+   "sofa_02"
+  ],
+  "front": "+Z"
+ },
+ "standing_picture_frame_01": {
+  "width_cm": 10.0,
+  "depth_cm": 20.1,
+  "height_cm": 25.0,
+  "centroid_off": [
+   0.1228,
+   0.1101
+  ],
+  "top_off": [
+   -0.0413,
+   -0.0009
+  ],
+  "meshes": 1,
+  "materials": [
+   "standing_picture_frame_01_glass",
+   "standing_picture_frame_01_artwork",
+   "standing_picture_frame_01"
+  ],
+  "front": "+X"
+ },
+ "standing_picture_frame_02": {
+  "width_cm": 10.2,
+  "depth_cm": 21.7,
+  "height_cm": 26.6,
+  "centroid_off": [
+   0.1813,
+   0.0606
+  ],
+  "top_off": [
+   0.0565,
+   -0.001
+  ],
+  "meshes": 1,
+  "materials": [
+   "standing_picture_frame_02_artwork",
+   "standing_picture_frame_02",
+   "standing_picture_frame_02_glass"
+  ],
+  "front": "+X"
+ },
+ "vintage_grandfather_clock_01": {
+  "width_cm": 62.6,
+  "depth_cm": 42.7,
+  "height_cm": 219.1,
+  "centroid_off": [
+   0.0216,
+   0.0887
+  ],
+  "top_off": [
+   -0.0418,
+   0.0269
+  ],
+  "meshes": 3,
+  "materials": [
+   "vintage_grandfather_clock_01",
+   "vintage_grandfather_clock_01_glass"
+  ],
+  "front": "+Z"
+ }
+}
