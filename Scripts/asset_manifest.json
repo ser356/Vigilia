@@ -222,6 +222,24 @@
    "sources": [
     {
      "type": "fab",
+     "title": "Urban Miscellaneous Door Interior Mixed Modern 02",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/297f9432-c01d-4154-8c1a-8d23d3d3f0c3",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    },
+    {
+     "type": "fab",
+     "title": "Urban Miscellaneous Door Interior Mixed Modern 01",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/54a8377f-0edd-4eb9-a686-669a728b8007",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    },
+    {
+     "type": "fab",
      "title": "Old Wooden Door",
      "seller": "Quixel Megascans",
      "url": "https://www.fab.com/listings/df0f97f7-8482-4a67-b31c-a4c9fb5db017",
@@ -233,7 +251,7 @@
    "collision": "box",
    "max_tex": 2048,
    "required": true,
-   "size_cm": 243
+   "size_cm": 210
   },
   "window": {
    "category": "Architecture",
@@ -564,6 +582,57 @@
    "collision": "box",
    "max_tex": 1024,
    "size_cm": 23
+  },
+  "coat_stand": {
+   "category": "Decor",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Wooden Standing Coat Hanger",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/b8252c32-a7bb-4d0c-a480-181a6648f915",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    }
+   ],
+   "collision": "none",
+   "max_tex": 1024,
+   "size_cm": 180
+  },
+  "dress": {
+   "category": "Decor",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Urban Shanty Town Dress Fabric Worn",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/51bb3f4a-40b4-4bdd-b87a-f8e47a7bfc5d",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    }
+   ],
+   "collision": "none",
+   "max_tex": 1024,
+   "size_cm": 110
+  },
+  "bust": {
+   "category": "Decor",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Female Bust Statuette",
+     "seller": "Quixel Megascans",
+     "url": "https://www.fab.com/listings/e47ee8d9-8b33-4a2d-b591-dd0c187ca5bc",
+     "license": "Fab Standard License",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 1024,
+   "size_cm": 45
   }
  },
  "surfaces": {

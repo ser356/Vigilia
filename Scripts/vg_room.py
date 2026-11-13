@@ -735,9 +735,18 @@ def furnish(res, mats, info, photos):
             item = put_on(p, side, dx=2.0, dy=-side.wy * 0.18, cls=unreal.VGExaminable, folder="Interactables")
             examinable(item.actor, "la fotografia", "La foto esta descolorida. No reconoces a nadie.")
             out["frame_small"] = item
-        p = prep("vase")
+        # Busto de escayola: mira a la sala... y te sigue con la mirada cuando no lo ves.
+        p = prep("bust", face_yaw=0.0)
         if p:
-            out["vase"] = put_on(p, side, dx=-4.0, dy=side.wy * 0.22)
+            bust = put_on(p, side, dx=-4.0, dy=side.wy * 0.22)
+            if bust:
+                out["bust"] = bust
+                front, _ = front_direction(p.resolved, p.group, STATE["metrics"])
+                STATE["bust_face_offset"] = -yaw_of(front)
+        else:
+            p = prep("vase")
+            if p:
+                out["vase"] = put_on(p, side, dx=-4.0, dy=side.wy * 0.22)
         p = prep("telephone", face_yaw=0.0)
         if p:
             out["telephone"] = put_on(p, side, dx=4.0, dy=0.0, cls=unreal.VGPhone, folder="Interactables")
@@ -1049,6 +1058,11 @@ def at(trigger_actor, x, y, z):
     return unreal.Transform(location=V(x - c.x, y - c.y, z - c.z))
 
 
+def prep_slot(out, key, **kw):
+    r = STATE.get("res", {}).get(key)
+    return Prep(key, r, **kw) if r else None
+
+
 def build_scripted_events(out, door, info, lamp, tv):
     """Escalada de la partida. Todo es configurable aqui: tiempos (s desde el inicio), posiciones y orden.
 
@@ -1071,15 +1085,72 @@ def build_scripted_events(out, door, info, lamp, tv):
         return trigger(key, room_box[0], room_box[1], auto_fire_after=seconds,
                        require_player_inside=True, fire_on_overlap=False)
 
-    # --- Pasos en el pasillo y golpes en la puerta ---
+    # --- Luz del pasillo: fria y debil. Recorta la silueta tras el cristal de la puerta ---
+    hall_light = spawn_marked(unreal.PointLight, "hall_light", V(hall["x1"] - 40.0, hall_y, H - 30.0))
+    comp = hall_light.get_component_by_class(unreal.PointLightComponent)
+    comp.set_mobility(unreal.ComponentMobility.MOVABLE)
+    safe_set(comp, "intensity_units", unreal.LightUnits.LUMENS)
+    safe_set(comp, "intensity", 35.0)
+    safe_set(comp, "use_temperature", True)
+    safe_set(comp, "temperature", 6200.0)
+    safe_set(comp, "attenuation_radius", 420.0)
+
+    # --- La figura: perchero con un vestido viejo, de pie en el pasillo, oculta hasta el evento ---
+    figure = []
+    stand_prep = prep_slot(out, "coat_stand")
+    if stand_prep:
+        fx, fy = door_cx + 15.0, hall_y - 10.0
+        stand = stand_prep.spawn(fx, fy, 0.0, folder="Events", movable=True)
+        figure.append(stand.actor)
+        dress_prep = prep_slot(out, "dress")
+        if dress_prep:
+            dress = dress_prep.spawn(fx, fy, max(stand.top - dress_prep.h - 12.0, 0.0), folder="Events", movable=True)
+            dress.actor.attach_to_actor(stand.actor, "", unreal.AttachmentRule.KEEP_WORLD, unreal.AttachmentRule.KEEP_WORLD,
+                                        unreal.AttachmentRule.KEEP_WORLD, False)
+            figure.append(dress.actor)
+        for actor in figure:
+            actor.set_actor_hidden_in_game(True)
+            for comp in actor.get_components_by_class(unreal.StaticMeshComponent):
+                comp.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
+
+    # --- Zumbido de angustia (sube en los momentos clave) ---
+    dread = actor_sub.spawn_actor_from_class(unreal.AmbientSound, V(0, 0, 150), R())
+    dcomp = dread.get_component_by_class(unreal.AudioComponent)
+    safe_set(dcomp, "sound", sfx("dread_drone_loop"))
+    safe_set(dcomp, "auto_activate", False)
+    safe_set(dcomp, "allow_spatialization", False)
+    safe_set(dcomp, "volume_multiplier", 0.7)
+    mark(dread, "dread_drone", "Audio")
+
+    # --- Pasos en el pasillo, golpes, el pomo, y la puerta que se abre sola ---
     t = auto("event_steps", 75.0)
     x_start, x_end = hall["x1"] - 25.0, door_cx + 10.0
     steps = 7
     for i in range(steps):
         x = x_start + (x_end - x_start) * i / float(steps - 1)
         y = hall_y + (8.0 if i % 2 else -8.0)
-        t.add_step(action("PlaySound"), None, 0.75 * i, sfx("footstep_wood_%02d" % (i % 4 + 1)), at(t, x, y, 5.0), False)
-    t.add_step(action("PlaySound"), None, 0.75 * steps + 2.2, sfx("door_knock"), at(t, door_cx, -HY - T - 12.0, 120.0), False)
+        t.add_step(action("PlaySound"), None, 0.75 * i, sfx("footstep_wood_%02d" % (i % 3 + 1)), at(t, x, y, 5.0), False)
+    knock = 0.75 * steps + 2.2
+    t.add_step(action("PlaySound"), None, knock, sfx("door_knock"), at(t, door_cx, -HY - T - 12.0, 120.0), False)
+    t.add_step(action("FlashlightFail"), None, knock, None, unreal.Transform(location=V(6, 0, 0)), False)
+    for actor in figure:
+        t.add_step(action("ToggleVisibility"), actor, knock + 0.5, None, identity, False)
+    t.add_step(action("AudioPlay"), dread, knock + 1.0, None, identity, False)
+    t.add_step(action("PlaySound"), door, knock + 3.0, sfx("door_locked"), identity, False)
+    t.add_step(action("DoorOpen"), door, knock + 5.5, None, identity, False)
+    # La figura desaparece en cuanto apartas la vista; la puerta se cierra cuando no la miras.
+    for actor in figure:
+        t.add_step(action("ToggleVisibility"), actor, knock + 8.0, None, identity, True)
+    t.add_step(action("DoorClose"), door, knock + 9.0, None, identity, True)
+    t.add_step(action("AudioStop"), dread, knock + 16.0, None, identity, False)
+
+    # --- El busto te sigue con la mirada (solo cuando no lo miras) ---
+    bust = out.get("bust")
+    if bust:
+        t = trigger("event_bust", room_box[0], room_box[1], auto_fire_after=60.0, repeat_interval=4.0,
+                    fire_on_overlap=False, once=False)
+        face = unreal.Transform(rotation=R(yaw=STATE.get("bust_face_offset", 0.0)))
+        t.add_step(action("FacePlayer"), bust.actor, 0.0, None, face, True)
 
     # --- El sillon se gira hacia la puerta mientras no miras ---
     chair = out.get("armchair")
@@ -1094,6 +1165,7 @@ def build_scripted_events(out, door, info, lamp, tv):
     if stand:
         t = trigger("event_breath", (stand.x - 90.0, stand.y, 100.0), (60.0, 90.0, 100.0), min_game_time=120.0, chance=0.8)
         t.add_step(action("SoundBehindPlayer"), None, 0.4, sfx("breath"), unreal.Transform(location=V(65, 0, 0)), False)
+        t.add_step(action("SoundBehindPlayer"), None, 2.6, sfx("whisper"), unreal.Transform(location=V(90, 0, 0)), False)
         if tv:
             t.add_step(action("TVOff"), tv, 1.6, None, identity, False)
             t.add_step(action("TVOn"), tv, 2.3, None, identity, False)
@@ -1105,6 +1177,10 @@ def build_scripted_events(out, door, info, lamp, tv):
         answer = trigger("event_phone_answer", hidden, (10.0, 10.0, 10.0), fire_on_overlap=False)
         if out.get("clock_tick"):
             answer.add_step(action("AudioStop"), out["clock_tick"], 2.0, None, identity, False)
+        answer.add_step(action("AudioPlay"), dread, 3.0, None, identity, False)
+        answer.add_step(action("FlashlightFail"), None, 8.5, None, unreal.Transform(location=V(7, 0, 0)), False)
+        answer.add_step(action("AudioStop"), dread, 22.0, None, identity, False)
+        answer.add_step(action("SoundBehindPlayer"), None, 12.0, sfx("whisper"), unreal.Transform(location=V(60, 0, 0)), False)
         # Mientras escuchas: la tele se apaga, apagon total y al volver la imagen el oso ya no esta donde estaba.
         if tv:
             answer.add_step(action("TVOff"), tv, 9.0, None, identity, False)
@@ -1241,6 +1317,7 @@ def build():
         photos = import_local_sources()
         task.enter_progress_frame(1, "Resolviendo assets (Fab / Megascans / Poly Haven)")
         res = resolve_all(manifest)
+        STATE["res"] = res
         # Solo las texturas de los assets de Fab que se usan: cargar todo /Game/Fab (Raw a 8K) disparaba la memoria.
         cap_fab_textures(2048, [d for r in res.values() if r and r.is_fab for d in r.textures])
         for name, resolved in res.items():

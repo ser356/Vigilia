@@ -60,6 +60,8 @@ SOUNDS = {
     "phone_ring_loop": (["telephone ring", "phone ring"], 2, 15),
     "phone_voice": (["heavy breathing", "breathing", "whisper"], 4, 30),
     "breath": (["breath", "exhale"], 0.8, 4),
+    "whisper": (["whisper", "whispering", "creepy whisper"], 1.0, 6),
+    "dread_drone_loop": (["dark drone", "horror drone", "low drone", "drone"], 15, 180),
 }
 
 # Pasos: una grabacion de alguien andando sobre madera, troceada automaticamente en pisadas sueltas.

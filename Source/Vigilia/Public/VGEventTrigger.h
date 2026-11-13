@@ -32,7 +32,11 @@ enum class EVGEventAction : uint8
 	/** Hace sonar un AVGPhone. */
 	PhoneRing,
 	/** Dispara otro AVGEventTrigger (para encadenar secuencias). */
-	FireTrigger
+	FireTrigger,
+	/** Gira el Target (solo en horizontal) para que mire al jugador. */
+	FacePlayer,
+	/** La linterna del jugador parpadea y se apaga. Offset.X = duracion en segundos (por defecto 3). */
+	FlashlightFail
 };
 
 USTRUCT(BlueprintType)
@@ -55,7 +59,7 @@ struct FVGEventStep
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia")
 	FTransform Offset;
 
-	/** Solo se ejecuta si el jugador NO esta mirando al Target (alteraciones sutiles). */
+	/** Espera a que el jugador NO este mirando al Target para ejecutarse (reintenta hasta 40 s). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia")
 	bool bOnlyWhenUnseen = false;
 };
@@ -108,6 +112,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Events")
 	bool bRequirePlayerInside = false;
 
+	/** Si es > 0, tras dispararse se vuelve a disparar cada N segundos (comportamientos persistentes). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Events")
+	float RepeatInterval = 0.f;
+
 	/** Si es false, pisar el volumen no lo dispara (solo AutoFire o Fire()). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Events")
 	bool bFireOnOverlap = true;
@@ -124,6 +132,7 @@ private:
 	void HandleOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
 	void ExecuteStep(int32 Index);
+	void ExecuteStepWhenUnseen(int32 Index, int32 Attempt);
 	void TryAutoFire();
 	bool IsPlayerInside() const;
 	bool IsSeenByPlayer(const AActor* Target) const;

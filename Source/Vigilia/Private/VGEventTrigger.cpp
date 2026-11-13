@@ -4,6 +4,7 @@
 #include "VGDoor.h"
 #include "VGStatics.h"
 #include "VGPhone.h"
+#include "VGPlayerCharacter.h"
 #include "Components/AudioComponent.h"
 #include "Components/BoxComponent.h"
 #include "GameFramework/Pawn.h"
@@ -101,6 +102,11 @@ void AVGEventTrigger::Fire()
 {
 	bFired = true;
 	OnTriggered.Broadcast(this);
+	if (RepeatInterval > 0.f)
+	{
+		FTimerHandle Repeat;
+		GetWorldTimerManager().SetTimer(Repeat, this, &AVGEventTrigger::Fire, RepeatInterval, false);
+	}
 
 	for (int32 Index = 0; Index < Steps.Num(); ++Index)
 	{
@@ -114,6 +120,25 @@ void AVGEventTrigger::Fire()
 			GetWorldTimerManager().SetTimer(Handle, FTimerDelegate::CreateUObject(this, &AVGEventTrigger::ExecuteStep, Index), Steps[Index].Delay, false);
 		}
 	}
+}
+
+void AVGEventTrigger::ExecuteStepWhenUnseen(int32 Index, int32 Attempt)
+{
+	if (!Steps.IsValidIndex(Index) || Attempt > 160)
+	{
+		return;
+	}
+	if (IsSeenByPlayer(Steps[Index].Target))
+	{
+		FTimerHandle Retry;
+		GetWorldTimerManager().SetTimer(Retry, FTimerDelegate::CreateUObject(this, &AVGEventTrigger::ExecuteStepWhenUnseen, Index, Attempt + 1), 0.25f, false);
+		return;
+	}
+	FVGEventStep Copy = Steps[Index];
+	Copy.bOnlyWhenUnseen = false;
+	Steps.Add(Copy);
+	ExecuteStep(Steps.Num() - 1);
+	Steps.Pop();
 }
 
 bool AVGEventTrigger::IsSeenByPlayer(const AActor* Target) const
@@ -142,6 +167,8 @@ void AVGEventTrigger::ExecuteStep(int32 Index)
 
 	if (Step.bOnlyWhenUnseen && IsSeenByPlayer(Target))
 	{
+		// No se descarta: espera a que el jugador aparte la vista.
+		ExecuteStepWhenUnseen(Index, 1);
 		return;
 	}
 
@@ -241,6 +268,26 @@ void AVGEventTrigger::ExecuteStep(int32 Index)
 		if (AVGPhone* Phone = Cast<AVGPhone>(Target))
 		{
 			Phone->Ring();
+		}
+		break;
+	case EVGEventAction::FacePlayer:
+		if (Target)
+		{
+			if (const APawn* Pawn = UGameplayStatics::GetPlayerPawn(this, 0))
+			{
+				const FVector To = Pawn->GetActorLocation() - Target->GetActorLocation();
+				const float Yaw = FMath::RadiansToDegrees(FMath::Atan2(To.Y, To.X)) + static_cast<float>(Step.Offset.Rotator().Yaw);
+				FRotator Rot = Target->GetActorRotation();
+				Rot.Yaw = Yaw;
+				Target->SetActorRotation(Rot);
+			}
+		}
+		break;
+	case EVGEventAction::FlashlightFail:
+		if (AVGPlayerCharacter* Player = Cast<AVGPlayerCharacter>(UGameplayStatics::GetPlayerPawn(this, 0)))
+		{
+			const float Duration = Step.Offset.GetLocation().X > 0.1 ? static_cast<float>(Step.Offset.GetLocation().X) : 3.f;
+			Player->FailFlashlight(Duration);
 		}
 		break;
 	case EVGEventAction::FireTrigger:

@@ -239,6 +239,15 @@ void AVGPlayerCharacter::OnRunCompleted(const FInputActionValue& Value)
 
 void AVGPlayerCharacter::OnFlashlight(const FInputActionValue& Value)
 {
+	if (FlashlightFailTime > 0.f)
+	{
+		// Durante el fallo el interruptor hace "clic" pero no enciende.
+		if (LoadedFlashlightSound)
+		{
+			UGameplayStatics::PlaySound2D(this, LoadedFlashlightSound, 0.6f, 0.9f);
+		}
+		return;
+	}
 	Flashlight->ToggleVisibility();
 	if (LoadedFlashlightSound)
 	{
@@ -320,6 +329,7 @@ void AVGPlayerCharacter::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 	UpdateExamine();
 	UpdateFootsteps(DeltaSeconds);
+	UpdateFlashlightFailure(DeltaSeconds);
 }
 
 void AVGPlayerCharacter::VGSetSensitivity(float NewSensitivity)
@@ -340,5 +350,43 @@ void AVGPlayerCharacter::VGQuality(int32 Level)
 	{
 		Settings->SetOverallScalabilityLevel(FMath::Clamp(Level, 0, 3));
 		Settings->ApplySettings(false);
+	}
+}
+
+void AVGPlayerCharacter::FailFlashlight(float Duration)
+{
+	if (FlashlightFailTime <= 0.f)
+	{
+		bFlashlightWasOn = Flashlight->IsVisible();
+	}
+	FlashlightFailTime = FMath::Max(Duration, 0.5f);
+	FlashlightFailTotal = FlashlightFailTime;
+	FlashlightFlickerTimer = 0.f;
+}
+
+void AVGPlayerCharacter::UpdateFlashlightFailure(float DeltaSeconds)
+{
+	if (FlashlightFailTime <= 0.f)
+	{
+		return;
+	}
+	FlashlightFailTime -= DeltaSeconds;
+	if (FlashlightFailTime <= 0.f)
+	{
+		Flashlight->SetVisibility(bFlashlightWasOn);
+		return;
+	}
+	// Primer segundo y pico: parpadeo nervioso (si estaba encendida); despues, apagada del todo.
+	const float Elapsed = FlashlightFailTotal - FlashlightFailTime;
+	if (Elapsed > 1.2f || !bFlashlightWasOn)
+	{
+		Flashlight->SetVisibility(false);
+		return;
+	}
+	FlashlightFlickerTimer -= DeltaSeconds;
+	if (FlashlightFlickerTimer <= 0.f)
+	{
+		FlashlightFlickerTimer = FMath::FRandRange(0.04f, 0.14f);
+		Flashlight->SetVisibility(FMath::FRand() < 0.55f);
 	}
 }

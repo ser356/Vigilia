@@ -266,6 +266,16 @@ def make_horror_audio():
         chime[start:] += strike * np.minimum(tt / 0.003, 1.0)
     write_wav("clock_chime", chime, 0.8)
 
+    # Zumbido de angustia (provisional hasta descargar uno real con fetch_sounds.py):
+    # graves desafinados que laten despacio + aire filtrado.
+    n = int(20.0 * SR)
+    t = np.arange(n) / SR
+    drone = (np.sin(2 * math.pi * 41.0 * t) + 0.8 * np.sin(2 * math.pi * 41.7 * t)
+             + 0.35 * np.sin(2 * math.pi * 82.9 * t + 0.4 * np.sin(2 * math.pi * 0.07 * t)))
+    drone *= 0.75 + 0.25 * np.sin(2 * math.pi * t / 10.0)
+    drone += 0.6 * lowpass(noise(n), 160.0) / 0.05 * 0.01
+    write_wav("dread_drone_loop", seamless(drone, 2.0), 0.7)
+
 
 if __name__ == "__main__":
     os.makedirs(GEN, exist_ok=True)

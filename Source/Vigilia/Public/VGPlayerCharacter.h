@@ -42,6 +42,10 @@ public:
 	UFUNCTION(Exec, BlueprintCallable, Category = "Vigilia|Settings")
 	void VGSetSensitivity(float NewSensitivity);
 
+	/** La linterna parpadea y se apaga durante Duration segundos (no se puede encender mientras). */
+	UFUNCTION(BlueprintCallable, Category = "Vigilia|Flashlight")
+	void FailFlashlight(float Duration);
+
 	/** Consola: VGQuality 0..3 (bajo, medio, alto, epico). Se guarda para la proxima partida. */
 	UFUNCTION(Exec, BlueprintCallable, Category = "Vigilia|Settings")
 	void VGQuality(int32 Level);
@@ -117,6 +121,12 @@ private:
 	TArray<TObjectPtr<USoundBase>> LoadedFootsteps;
 	UPROPERTY(Transient)
 	TObjectPtr<USoundBase> LoadedFlashlightSound;
+
+	void UpdateFlashlightFailure(float DeltaSeconds);
+	float FlashlightFailTime = 0.f;
+	float FlashlightFailTotal = 0.f;
+	float FlashlightFlickerTimer = 0.f;
+	bool bFlashlightWasOn = false;
 
 	FQuat ExamineRotation = FQuat::Identity;
 	FVector ExamineCenterLocal = FVector::ZeroVector;
