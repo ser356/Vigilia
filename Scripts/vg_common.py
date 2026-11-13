@@ -483,13 +483,15 @@ def rotated_size(group, yaw_deg):
     return group.size[0] * c + group.size[1] * s, group.size[0] * s + group.size[1] * c
 
 
-def cap_fab_textures(max_size=2048):
+def cap_fab_textures(max_size=2048, datas=None):
     """Limita todas las texturas importadas desde Fab (las Raw vienen a 8K) a max_size.
     No borra nada: el original se queda en disco y se puede volver a subir el limite cuando se quiera.
     La primera vez recomprime las texturas afectadas (tarda unos minutos); despues es instantaneo."""
     capped = 0
-    for root in FAB_ROOTS:
-        for data in assets_under(root, ("Texture2D",)):
+    if datas is None:
+        datas = [d for root in FAB_ROOTS for d in assets_under(root, ("Texture2D",))]
+    for data in datas:
+        if True:
             tex = data.get_asset()
             try:
                 current = tex.get_editor_property("max_texture_size")

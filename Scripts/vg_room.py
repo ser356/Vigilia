@@ -1065,7 +1065,8 @@ def build():
         photos = import_local_sources()
         task.enter_progress_frame(1, "Resolviendo assets (Fab / Megascans / Poly Haven)")
         res = resolve_all(manifest)
-        cap_fab_textures(2048)
+        # Solo las texturas de los assets de Fab que se usan: cargar todo /Game/Fab (Raw a 8K) disparaba la memoria.
+        cap_fab_textures(2048, [d for r in res.values() if r and r.is_fab for d in r.textures])
         for name, resolved in res.items():
             if resolved and name in manifest["slots"]:
                 prepare_meshes(resolved)
@@ -1085,6 +1086,8 @@ def build():
         task.enter_progress_frame(1, "Guardando")
         level_sub.save_current_level()
         eal.save_directory(ROOT, True, True)
+    # Libera lo cargado durante la construccion (texturas fuente de 8K, mallas Raw...).
+    unreal.SystemLibrary.collect_garbage()
     report = write_report(manifest, res)
     log("Salon construido: %s (%d avisos). Pulsa Play para probarlo." % (MAP_PATH, len(WARNINGS)))
     return report
