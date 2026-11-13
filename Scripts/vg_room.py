@@ -1,4 +1,5 @@
 """Constructor procedural del salon de Vigilia. Idempotente: borra y regenera solo lo etiquetado como VG."""
+import json
 import math
 import os
 
@@ -170,7 +171,7 @@ class Prep(object):
         if override:
             dx, dy, dz = [override["loc"][i] - loc[i] for i in range(3)]
             loc = tuple(override["loc"])
-            rot = R(yaw=override["yaw"], pitch=rot.pitch, roll=rot.roll)
+            rot = R(yaw=override["yaw"], pitch=override.get("pitch", rot.pitch), roll=override.get("roll", rot.roll))
             self.rotation = rot
             self._measure()
             x, y, z = x + dx, y + dy, z + dz
@@ -1178,6 +1179,40 @@ def write_report(manifest, res):
     return path
 
 
+def capture_layout(overrides=None):
+    """Lee del nivel abierto los actores VG_* movidos o girados a mano respecto a donde los puso el
+    script y los guarda en Scripts/layout_overrides.json. build() lo hace siempre antes de reconstruir,
+    asi que los ajustes manuales ya no se pierden."""
+    path = os.path.join(PROJECT_DIR, "Scripts", "layout_overrides.json")
+    if overrides is None:
+        overrides = load_json("layout_overrides.json", {}) or {}
+    changed = 0
+    for actor in actor_sub.get_all_level_actors():
+        if not actor:
+            continue
+        tags = [str(t) for t in actor.tags]
+        key = next((t[7:] for t in tags if t.startswith("VGSlot:")), None)
+        auto = next((t[7:] for t in tags if t.startswith("VGAuto:")), None)
+        if not key or not auto:
+            continue
+        ax, ay, az, ayaw = [float(v) for v in auto.split(",")]
+        loc = actor.get_actor_location()
+        rot = actor.get_actor_rotation()
+        moved = abs(loc.x - ax) + abs(loc.y - ay) + abs(loc.z - az) > 0.5
+        turned = abs(((rot.yaw - ayaw + 180.0) % 360.0) - 180.0) > 0.5
+        if moved or turned or key in overrides:
+            entry = {"loc": [round(loc.x, 2), round(loc.y, 2), round(loc.z, 2)], "yaw": round(rot.yaw, 2),
+                     "pitch": round(rot.pitch, 2), "roll": round(rot.roll, 2)}
+            if overrides.get(key) != entry:
+                overrides[key] = entry
+                changed += 1
+    with open(path, "w", encoding="utf-8") as fh:
+        json.dump(overrides, fh, indent=1, sort_keys=True)
+    if changed:
+        log("%d ajustes manuales guardados en %s" % (changed, path))
+    return overrides
+
+
 def open_level():
     if eal.does_asset_exist(MAP_PATH):
         level_sub.load_level(MAP_PATH)
@@ -1191,7 +1226,12 @@ def open_level():
 def build():
     manifest = load_json("asset_manifest.json")
     STATE["metrics"] = load_json("polyhaven_metrics.json", {}) or {}
-    STATE["overrides"] = load_json("layout_overrides.json", {}) or {}
+    # Si el nivel del salon esta abierto, primero se guardan los objetos movidos a mano.
+    world = unreal.get_editor_subsystem(unreal.UnrealEditorSubsystem).get_editor_world()
+    if world and world.get_path_name().startswith(MAP_PATH):
+        STATE["overrides"] = capture_layout()
+    else:
+        STATE["overrides"] = load_json("layout_overrides.json", {}) or {}
     STATE["unverified"], STATE["blockouts"], STATE["used"] = [], [], {}
     del WARNINGS[:]
 

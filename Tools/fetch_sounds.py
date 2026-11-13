@@ -53,8 +53,9 @@ SOUNDS = {
     "creak_wood_02": (["floorboard creak", "wooden floor creak", "creak"], 0.5, 5),
     "distant_thump": (["thud", "thump", "bang"], 0.4, 4),
     "pipe_knock": (["pipe knock", "radiator knock", "pipes", "knock metal"], 0.5, 8),
-    "object_pickup": (["pick up", "picking up", "grab object"], 0.2, 2),
-    "object_putdown": (["put down", "set down", "object drop"], 0.2, 2),
+    # Coger/dejar: sonidos de manipulacion suaves (roce de tela/papel y un toque leve de madera).
+    "object_pickup": (["cloth rustle", "fabric movement", "paper handling", "foley handling"], 0.2, 1.5),
+    "object_putdown": (["wood tap", "tap on wood", "small object on table", "wood knock light"], 0.1, 1.2),
     "door_knock": (["door knock", "knocking", "knock"], 0.8, 8),
     "phone_ring_loop": (["telephone ring", "phone ring"], 2, 15),
     "phone_voice": (["heavy breathing", "breathing", "whisper"], 4, 30),
@@ -194,7 +195,7 @@ def main():
         with open(CHOICES, encoding="utf-8") as fh:
             choices = json.load(fh)
 
-    used_ids = {c["id"] for c in choices.values()}
+    used_ids = {c["id"] for k, c in choices.items() if not k.startswith("_")}
     credits = []
     tmpdir = tempfile.mkdtemp(prefix="vigilia_sfx_")
     # Pasos individuales de una version anterior del script: se descartan para trocear una grabacion real.
@@ -211,8 +212,12 @@ def main():
                 sound = api_sound(key, chosen["id"])
             else:
                 exclude = used_ids - ({chosen["id"]} if chosen else set())
+                rejected = set(choices.get("_rechazados", {}).get(name, []))
                 if chosen and name in args.reroll:
-                    exclude = exclude | {chosen["id"]}
+                    # El descartado no vuelve a salir en futuros --reroll.
+                    rejected.add(chosen["id"])
+                    choices.setdefault("_rechazados", {})[name] = sorted(rejected)
+                exclude = exclude | rejected
                 query, results = search_any(key, queries, dmin, dmax, exclude)
                 if not results:
                     print("[%s] sin resultados CC0 (%s); se mantiene el actual" % (name, ", ".join(queries)))
@@ -226,9 +231,9 @@ def main():
             if name == "footsteps":
                 full = os.path.join(tmpdir, "footsteps.wav")
                 convert(src, full)
-                outs = [os.path.join(AUDIO, "footstep_wood_%02d.wav" % i) for i in range(1, 5)]
+                outs = [os.path.join(AUDIO, "footstep_wood_%02d.wav" % i) for i in range(1, 4)]
                 found = slice_steps(full, outs)
-                if found < 4:
+                if found < 3:
                     print("[footsteps] solo %d pisadas detectadas; prueba --reroll footsteps" % found)
             else:
                 dst = os.path.join(AUDIO, name + ".wav")
@@ -246,6 +251,8 @@ def main():
     with open(CHOICES, "w", encoding="utf-8") as fh:
         json.dump(choices, fh, indent=1, ensure_ascii=False, sort_keys=True)
     for name, c in sorted(choices.items()):
+        if name.startswith("_"):
+            continue
         credits.append("- `%s`: [%s](%s) por %s (CC0)" % (name, c["name"], c["url"], c["user"]))
     with open(os.path.join(AUDIO, "CREDITS.md"), "w", encoding="utf-8") as fh:
         fh.write("# Sonidos (Freesound, CC0)\n\nNo exigen atribucion; se lista por cortesia.\n\n" + "\n".join(credits) + "\n")
