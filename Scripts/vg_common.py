@@ -174,10 +174,18 @@ def _build_fab_index():
             cls = class_name(data)
             if cls not in ("StaticMesh", "Texture2D", "MaterialInstanceConstant", "Material"):
                 continue
+            # Se ignoran entradas cuyo paquete ya no existe en disco (borrado a medias o descarga interrumpida).
+            if not eal.does_asset_exist(str(data.package_name)):
+                continue
             folder = str(data.package_path)
             index.setdefault(folder, []).append(data)
     _fab_index = index
     return index
+
+
+# Calidades en las que el plugin de Fab importa Megascans, de mas a menos preferida para un juego.
+# "Raw" son las texturas de escaneo a 8K: pesan gigas y no aportan nada a la distancia de juego.
+FAB_QUALITY_ORDER = ["medium", "high", "low", "raw"]
 
 
 def _fab_lookup(title):
@@ -185,28 +193,40 @@ def _fab_lookup(title):
     key = norm(title)
     best = None
     for folder in index:
-        if folder in _fab_claimed:
-            continue
-        segments = [norm(s) for s in folder.split("/") if s]
-        names = [norm(d.asset_name) for d in index[folder]]
-        score = None
-        for seg in segments:
-            if seg.startswith(key):
-                score = min(score, len(seg) - len(key)) if score is not None else len(seg) - len(key)
-        if score is None and any(key in n for n in names):
-            score = 1000
-        if score is not None and (best is None or score < best[0]):
-            best = (score, folder)
+        parts = [p for p in folder.split("/") if p]
+        for i, seg in enumerate(parts):
+            n = norm(seg)
+            if n.startswith(key):
+                # Raiz del asset: la carpeta cuyo nombre empieza por el titulo (p. ej. Wooden_Table_ukphdffaw).
+                root = "/" + "/".join(parts[: i + 1])
+                score = len(n) - len(key)
+                if root not in _fab_claimed and (best is None or score < best[0]):
+                    best = (score, root)
+                break
     if not best:
         return None
-    # Incluye subcarpetas (texturas/materiales suelen ir en hijos de la carpeta del asset).
-    base = best[1]
-    datas = []
+    root = best[1]
+
+    # Agrupa por calidad (primer nivel bajo la raiz) y se queda con la mejor disponible.
+    by_quality = {}
     for folder, items in index.items():
-        if folder == base or folder.startswith(base + "/"):
-            datas.extend(items)
-            _fab_claimed.add(folder)
-    return base, datas
+        if folder == root or folder.startswith(root + "/"):
+            rest = folder[len(root):].strip("/").split("/")
+            quality = rest[0].lower() if rest and rest[0] else ""
+            by_quality.setdefault(quality, []).extend(items)
+    chosen = None
+    for quality in FAB_QUALITY_ORDER:
+        if by_quality.get(quality):
+            chosen = quality
+            break
+    if chosen is None:
+        datas = [d for items in by_quality.values() for d in items]
+    else:
+        datas = by_quality[chosen]
+        if chosen == "raw":
+            warn("'%s' solo esta en calidad Raw (8K, muy pesada). Anadelo de nuevo desde Fab en calidad Medium." % title)
+    _fab_claimed.add(root)
+    return root, datas
 
 
 def _polyhaven_folder(kind, category, asset_id):
