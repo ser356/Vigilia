@@ -552,9 +552,9 @@
     },
     {
      "type": "polyhaven_texture",
-     "id": "beige_wall_001",
+     "id": "painted_plaster_wall",
      "res": "2k",
-     "url": "https://polyhaven.com/a/beige_wall_001",
+     "url": "https://polyhaven.com/a/painted_plaster_wall",
      "license": "CC0"
     }
    ],
@@ -639,9 +639,9 @@
     },
     {
      "type": "polyhaven_texture",
-     "id": "quatrefoil_jacquard_fabric",
+     "id": "terlenka",
      "res": "2k",
-     "url": "https://polyhaven.com/a/quatrefoil_jacquard_fabric",
+     "url": "https://polyhaven.com/a/terlenka",
      "license": "CC0"
     }
    ],

@@ -299,8 +299,8 @@ def build_materials(res):
     if curtain:
         STATE["used"]["curtain_fabric"] = curtain
         mats["curtain"] = vm.instance("MI_Curtain", fabric, vm.classify_surface_textures(curtain),
-                                      {"Tiling": 100.0 / curtain.spec.get("tile_cm", 120), "Transmission": 0.3},
-                                      {"Tint": (0.74, 0.66, 0.52, 1)})
+                                      {"Tiling": 100.0 / curtain.spec.get("tile_cm", 120), "Transmission": 0.18},
+                                      {"Tint": (0.92, 0.9, 0.86, 1)})
     else:
         mats["curtain"] = fabric
 
@@ -518,11 +518,11 @@ def setup_television(tv, prep, mats):
     safe_set(tv, "static_loop_sound", sfx("tv_static_loop"))
 
 
-def setup_lamp(lamp, prep, lumens=620.0):
+def setup_lamp(lamp, prep, lumens=450.0):
     g = prep.group
     top = g.centroid(0.2) or [0.0, 0.0]
     local = V(g.center[0] + top[0] * g.size[0], g.center[1] + top[1] * g.size[1], g.min[2] + g.size[2] * 0.86)
-    lamp.setup_light(local, lumens, 2650.0, 650.0)
+    lamp.setup_light(local, lumens, 3000.0, 600.0)
     safe_set(lamp, "switch_sound", sfx("switch_click"))
 
 
@@ -712,7 +712,7 @@ def build_lighting(info):
     win_z = (w["opening"][2] + w["opening"][3]) * 0.5
 
     spawn_marked(unreal.SkyAtmosphere, "sky_atmosphere", V(0, 0, 0))
-    moon = spawn_marked(unreal.DirectionalLight, "moon", V(0, 600, 600), R(yaw=-78.0, pitch=-32.0))
+    moon = spawn_marked(unreal.DirectionalLight, "moon", V(0, 600, 600), R(yaw=-78.0, pitch=-55.0))
     comp = moon.get_component_by_class(unreal.DirectionalLightComponent)
     comp.set_mobility(unreal.ComponentMobility.MOVABLE)
     safe_set(comp, "intensity", 0.35)
@@ -723,18 +723,20 @@ def build_lighting(info):
     comp = sky.get_component_by_class(unreal.SkyLightComponent)
     comp.set_mobility(unreal.ComponentMobility.MOVABLE)
     safe_set(comp, "real_time_capture", True)
-    safe_set(comp, "intensity", 0.6)
+    safe_set(comp, "intensity", 0.3)
+    safe_set(comp, "light_color", unreal.Color(r=150, g=170, b=210, a=255))
 
-    # Farola de sodio en la calle: entra en diagonal por la ventana y dibuja las cortinas en la pared.
+    # Farola fria en la calle: entra en diagonal por la ventana y dibuja las cortinas en la pared.
+    # Fria a proposito: contrasta con la lampara calida del salon (una farola de sodio lo tenia todo naranja).
     street = spawn_marked(unreal.SpotLight, "street_lamp", V(w["cx"] + 210.0, HY + 330.0, win_z + 190.0))
     target = V(w["cx"] - 40.0, HY - 60.0, win_z - 40.0)
     street.set_actor_rotation(ML.find_look_at_rotation(street.get_actor_location(), target), False)
     comp = street.get_component_by_class(unreal.SpotLightComponent)
     comp.set_mobility(unreal.ComponentMobility.MOVABLE)
     safe_set(comp, "intensity_units", unreal.LightUnits.LUMENS)
-    safe_set(comp, "intensity", 5200.0)
+    safe_set(comp, "intensity", 1600.0)
     safe_set(comp, "use_temperature", True)
-    safe_set(comp, "temperature", 2100.0)
+    safe_set(comp, "temperature", 7200.0)
     safe_set(comp, "attenuation_radius", 1600.0)
     safe_set(comp, "inner_cone_angle", 16.0)
     safe_set(comp, "outer_cone_angle", 30.0)
@@ -754,12 +756,14 @@ def build_lighting(info):
     s = ppv.get_editor_property("settings")
     values = {
         # Exposicion contenida: la habitacion debe poder quedarse realmente a oscuras.
-        "auto_exposure_min_brightness": -1.0,
-        "auto_exposure_max_brightness": 3.5,
-        "auto_exposure_bias": -0.6,
+        # EV100. El minimo alto impide que la camara "abra" en la oscuridad y lo tina todo del color
+        # de la unica luz que quede: a oscuras, la habitacion debe verse oscura.
+        "auto_exposure_min_brightness": 1.5,
+        "auto_exposure_max_brightness": 5.0,
+        "auto_exposure_bias": 0.0,
         "auto_exposure_speed_up": 1.5,
         "auto_exposure_speed_down": 0.8,
-        "bloom_intensity": 0.35,
+        "bloom_intensity": 0.2,
         "vignette_intensity": 0.45,
         "film_grain_intensity": 0.22,
         "scene_fringe_intensity": 0.15,

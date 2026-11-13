@@ -47,7 +47,7 @@ Cada hueco usa el primer asset disponible de su lista; el resto son respaldos au
 | boombox | [boombox](https://polyhaven.com/a/boombox) | Poly Haven | Gratis | CC0 | glTF 2k | 2048 px |
 | telephone | [Nortel Vista 200 Corded Landline Telephone](https://www.fab.com/listings/6ee9fcce-4b89-4436-8349-5c006462af10) | Fab - JordanFry3D | Gratis | Fab Standard License | FBX/glTF (import. plugin Fab) | 1024 px |
 | wall | [Old Decorative Wallpaper](https://www.fab.com/listings/106a4c05-9779-4b88-9705-d28c3c540f89) | Fab - Quixel Megascans | Gratis | Fab Standard License | FBX/glTF (import. plugin Fab) | 2K, mosaico 200 cm |
-| &nbsp;&nbsp;respaldo | [beige_wall_001](https://polyhaven.com/a/beige_wall_001) | Poly Haven | Gratis | CC0 | JPG 2k | 2K, mosaico 200 cm |
+| &nbsp;&nbsp;respaldo | [painted_plaster_wall](https://polyhaven.com/a/painted_plaster_wall) | Poly Haven | Gratis | CC0 | JPG 2k | 2K, mosaico 200 cm |
 | ceiling | [Plaster Wall](https://www.fab.com/listings/bfc33074-f69b-4096-8d03-04d4af159622) | Fab - Quixel Megascans | Gratis | Fab Standard License | FBX/glTF (import. plugin Fab) | 2K, mosaico 250 cm |
 | &nbsp;&nbsp;respaldo | [white_plaster_02](https://polyhaven.com/a/white_plaster_02) | Poly Haven | Gratis | CC0 | JPG 2k | 2K, mosaico 250 cm |
 | floor | [Basket Weave Parquet](https://www.fab.com/listings/5c1f37f8-8281-42a6-9718-22f041578dc1) | Fab - Quixel Megascans | Gratis | Fab Standard License | FBX/glTF (import. plugin Fab) | 2K, mosaico 200 cm |
@@ -55,7 +55,7 @@ Cada hueco usa el primer asset disponible de su lista; el resto son respaldos au
 | rug | [Old Carpet](https://www.fab.com/listings/f6a088c6-6325-41fe-804f-86c572834b7a) | Fab - Quixel Megascans | Gratis | Fab Standard License | FBX/glTF (import. plugin Fab) | 2K, mosaico 150 cm |
 | &nbsp;&nbsp;respaldo | [dirty_carpet](https://polyhaven.com/a/dirty_carpet) | Poly Haven | Gratis | CC0 | JPG 2k | 2K, mosaico 150 cm |
 | curtain_fabric | [Furniture Fabric](https://www.fab.com/listings/83ff7c89-d525-4fae-bd8c-4f18dac106a8) | Fab - Quixel Megascans | Gratis | Fab Standard License | FBX/glTF (import. plugin Fab) | 2K, mosaico 120 cm |
-| &nbsp;&nbsp;respaldo | [quatrefoil_jacquard_fabric](https://polyhaven.com/a/quatrefoil_jacquard_fabric) | Poly Haven | Gratis | CC0 | JPG 2k | 2K, mosaico 120 cm |
+| &nbsp;&nbsp;respaldo | [terlenka](https://polyhaven.com/a/terlenka) | Poly Haven | Gratis | CC0 | JPG 2k | 2K, mosaico 120 cm |
 | trim_wood | [wood_floor_worn](https://polyhaven.com/a/wood_floor_worn) | Poly Haven | Gratis | CC0 | JPG 2k | 2K, mosaico 180 cm |
 
 Notas:
