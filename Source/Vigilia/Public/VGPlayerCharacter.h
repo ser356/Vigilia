@@ -6,6 +6,7 @@
 
 class UCameraComponent;
 class USpotLightComponent;
+class UPointLightComponent;
 class UInputAction;
 class UInputMappingContext;
 class UVGInteractionComponent;
@@ -62,6 +63,14 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vigilia")
 	TObjectPtr<UVGInteractionComponent> Interaction;
+
+	/** Luz suave junto a la camara que solo se enciende al examinar un objeto. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vigilia")
+	TObjectPtr<UPointLightComponent> InspectLight;
+
+	/** Lumenes de la luz de examen para un objeto a 40 cm (se ajusta con la distancia). */
+	UPROPERTY(Config, EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Examine")
+	float InspectLumens = 6.f;
 
 	UPROPERTY(Config, EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Settings")
 	float MouseSensitivity = 1.f;
@@ -123,6 +132,7 @@ private:
 	TObjectPtr<USoundBase> LoadedFlashlightSound;
 
 	void UpdateFlashlightFailure(float DeltaSeconds);
+	bool bFlashlightBeforeExamine = false;
 	float FlashlightFailTime = 0.f;
 	float FlashlightFailTotal = 0.f;
 	float FlashlightFlickerTimer = 0.f;

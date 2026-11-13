@@ -5,6 +5,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SpotLightComponent.h"
+#include "Components/PointLightComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "Engine/LocalPlayer.h"
@@ -34,13 +35,30 @@ AVGPlayerCharacter::AVGPlayerCharacter()
 	Flashlight->SetupAttachment(Camera);
 	Flashlight->SetRelativeLocation(FVector(8.f, 14.f, -12.f));
 	Flashlight->SetIntensityUnits(ELightUnits::Lumens);
-	Flashlight->SetIntensity(90.f);
-	Flashlight->SetInnerConeAngle(9.f);
-	Flashlight->SetOuterConeAngle(24.f);
+	// Linterna vieja y debil: 90 lm quemaban cualquier superficie a menos de 1 m.
+	Flashlight->SetIntensity(28.f);
+	Flashlight->SetInnerConeAngle(12.f);
+	Flashlight->SetOuterConeAngle(30.f);
+	Flashlight->SetSourceRadius(2.f);
 	Flashlight->SetAttenuationRadius(1100.f);
 	Flashlight->bUseTemperature = true;
 	Flashlight->Temperature = 4300.f;
 	Flashlight->SetVisibility(false);
+
+	// Luz de examen: suave, por encima y a la izquierda de la camara, con alcance corto para que solo
+	// ilumine el objeto que tienes en la mano (no el resto de la habitacion).
+	InspectLight = CreateDefaultSubobject<UPointLightComponent>(TEXT("InspectLight"));
+	InspectLight->SetupAttachment(Camera);
+	InspectLight->SetRelativeLocation(FVector(10.f, -22.f, 26.f));
+	InspectLight->SetIntensityUnits(ELightUnits::Lumens);
+	InspectLight->SetIntensity(InspectLumens);
+	InspectLight->SetAttenuationRadius(160.f);
+	InspectLight->SetSourceRadius(12.f);
+	InspectLight->SetSoftSourceRadius(20.f);
+	InspectLight->bUseTemperature = true;
+	InspectLight->Temperature = 4600.f;
+	InspectLight->SetCastShadows(false);
+	InspectLight->SetVisibility(false);
 
 	Interaction = CreateDefaultSubobject<UVGInteractionComponent>(TEXT("Interaction"));
 
@@ -239,6 +257,10 @@ void AVGPlayerCharacter::OnRunCompleted(const FInputActionValue& Value)
 
 void AVGPlayerCharacter::OnFlashlight(const FInputActionValue& Value)
 {
+	if (ExaminedItem)
+	{
+		return;
+	}
 	if (FlashlightFailTime > 0.f)
 	{
 		// Durante el fallo el interruptor hace "clic" pero no enciende.
@@ -271,6 +293,15 @@ void AVGPlayerCharacter::BeginExamine(AVGExaminable* Item)
 	ExamineRotation = Item->GetActorQuat();
 	ExamineDistance = FMath::Clamp(Item->GetExamineRadius() * 2.4f + 12.f, 28.f, 95.f);
 	Item->BeginExamine();
+
+	// Iluminacion de examen constante: la linterna (a centimetros del objeto) lo quemaba y a oscuras
+	// no se veia. Se apaga la linterna y se usa una luz suave ajustada a la distancia del objeto.
+	bFlashlightBeforeExamine = Flashlight->IsVisible();
+	Flashlight->SetVisibility(false);
+	const float DistanceScale = FMath::Square(ExamineDistance / 40.f);
+	InspectLight->SetIntensity(InspectLumens * DistanceScale);
+	InspectLight->SetAttenuationRadius(ExamineDistance * 2.5f + 40.f);
+	InspectLight->SetVisibility(true);
 }
 
 void AVGPlayerCharacter::EndExamine()
@@ -278,6 +309,11 @@ void AVGPlayerCharacter::EndExamine()
 	if (!ExaminedItem)
 	{
 		return;
+	}
+	InspectLight->SetVisibility(false);
+	if (FlashlightFailTime <= 0.f)
+	{
+		Flashlight->SetVisibility(bFlashlightBeforeExamine);
 	}
 	ExaminedItem->EndExamine();
 	ExaminedItem = nullptr;
