@@ -224,7 +224,7 @@ def _fab_lookup(title):
     else:
         datas = by_quality[chosen]
         if chosen == "raw":
-            warn("'%s' solo esta en calidad Raw (8K, muy pesada). Anadelo de nuevo desde Fab en calidad Medium." % title)
+            log("'%s' esta en calidad Raw: sus texturas se limitan automaticamente (cap_fab_textures)." % title)
     _fab_claimed.add(root)
     return root, datas
 
@@ -459,3 +459,25 @@ def rotated_size(group, yaw_deg):
     a = math.radians(yaw_deg)
     c, s = abs(math.cos(a)), abs(math.sin(a))
     return group.size[0] * c + group.size[1] * s, group.size[0] * s + group.size[1] * c
+
+
+def cap_fab_textures(max_size=2048):
+    """Limita todas las texturas importadas desde Fab (las Raw vienen a 8K) a max_size.
+    No borra nada: el original se queda en disco y se puede volver a subir el limite cuando se quiera.
+    La primera vez recomprime las texturas afectadas (tarda unos minutos); despues es instantaneo."""
+    capped = 0
+    for root in FAB_ROOTS:
+        for data in assets_under(root, ("Texture2D",)):
+            tex = data.get_asset()
+            try:
+                current = tex.get_editor_property("max_texture_size")
+                biggest = max(tex.blueprint_get_size_x(), tex.blueprint_get_size_y())
+                if biggest > max_size and (current == 0 or current > max_size):
+                    tex.set_editor_property("max_texture_size", max_size)
+                    eal.save_loaded_asset(tex, False)
+                    capped += 1
+            except Exception as exc:  # noqa: BLE001
+                warn("Textura %s: %s" % (tex.get_name(), exc))
+    if capped:
+        log("Texturas de Fab limitadas a %d px: %d" % (max_size, capped))
+    return capped

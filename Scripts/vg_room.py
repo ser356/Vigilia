@@ -4,7 +4,7 @@ import os
 import unreal
 
 import vg_materials as vm
-from vg_common import (PROJECT_DIR, ROOT, SOURCE_DIR, WARNINGS, assets_under, configure_texture, eal, front_direction,
+from vg_common import (PROJECT_DIR, cap_fab_textures, ROOT, SOURCE_DIR, WARNINGS, assets_under, configure_texture, eal, front_direction,
                        gltf_mapping, group_for, import_files, load_json, log, prepare_meshes, resolve_all, safe_set,
                        warn, yaw_of)
 
@@ -933,6 +933,7 @@ def build():
         photos = import_local_sources()
         task.enter_progress_frame(1, "Resolviendo assets (Fab / Megascans / Poly Haven)")
         res = resolve_all(manifest)
+        cap_fab_textures(2048)
         for name, resolved in res.items():
             if resolved and name in manifest["slots"]:
                 prepare_meshes(resolved)
