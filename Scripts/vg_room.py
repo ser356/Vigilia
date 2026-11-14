@@ -1169,7 +1169,7 @@ def dress_house(out):
     # Cocina
     house_out = STATE.setdefault("house_out", {})
     wall("d_kcabinet", "kitchen", "S", -360.0)
-    wall("d_trash", "kitchen", "E", -560.0, yaw_extra=0.0)
+    # Se omite el conjunto de cubos exteriores: no encaja en esta cocina.
     wall("d_kbasket", "kitchen", "S", -640.0)
     floor("d_broom", ROOMS["kitchen"]["x1"] - 40.0, ROOMS["kitchen"]["y1"] - 45.0)
     ktable = house_out.get("kitchen_table")
@@ -1699,7 +1699,7 @@ def build():
         import sys
         vg_mansion.build(sys.modules[__name__], res, mats, photos)
         vg_mansion.gameplay(sys.modules[__name__], out, door, info, mats)
-        spawn_dust(mats)
+        # Polvo procedural desactivado: pendiente de un efecto artistico validado.
         task.enter_progress_frame(1, "Guardando")
         level_sub.save_current_level()
         eal.save_directory(ROOT, True, True)
