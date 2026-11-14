@@ -327,7 +327,7 @@ void AVGEntity::Tick(float DeltaSeconds)
 		{
 			const FVector Eye = PC->PlayerCameraManager->GetCameraLocation();
 			const FVector Aim = (GetActorLocation() + FVector(0, 0, 150) - Eye).GetSafeNormal();
-			const bool bLooking = FVector::DotProduct(PC->PlayerCameraManager->GetActorRotation().Vector(), Aim) > 0.97f;
+			const bool bLooking = FVector::DotProduct(PC->PlayerCameraManager->GetCameraRotation().Vector(), Aim) > 0.97f;
 			FHitResult Hit;
 			FCollisionQueryParams Query(SCENE_QUERY_STAT(VGEntityGaze), true, this);
 			Query.AddIgnoredActor(Player);
@@ -418,7 +418,7 @@ bool AVGEntity::CanManifestAt(const FVector& Location) const
 	{
 		const FVector Eye = PC->PlayerCameraManager->GetCameraLocation();
 		const FVector Head = Location + FVector(0, 0, 150);
-		const float Dot = FVector::DotProduct(PC->PlayerCameraManager->GetActorRotation().Vector(), (Head - Eye).GetSafeNormal());
+		const float Dot = FVector::DotProduct(PC->PlayerCameraManager->GetCameraRotation().Vector(), (Head - Eye).GetSafeNormal());
 		FHitResult Hit;
 		FCollisionQueryParams Query(SCENE_QUERY_STAT(VGEntitySpawn), true, this);
 		Query.AddIgnoredActor(Player);
