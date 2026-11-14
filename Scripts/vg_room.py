@@ -1441,7 +1441,9 @@ def build_house(res, mats, info, out):
             DOOR_W = max(w, MIN_DOOR_W)
         if DOOR_LEAF_W[0] > 0.0:
             DOOR_W = DOOR_LEAF_W[0]
-        if 180.0 <= h <= H - 25.0:
+        # La puerta de Megascans mide ~240 cm de alto: se respeta (antes el limite era 230 y los huecos
+        # del pasillo se quedaban en 205, con la hoja metida en la pared por arriba).
+        if 180.0 <= h <= H - 8.0:
             DOOR_H = h
 
     def hole(c):
