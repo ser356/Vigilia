@@ -8,7 +8,7 @@ AVGTelevision::AVGTelevision()
 {
 	ScreenPlane = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ScreenPlane"));
 	ScreenPlane->SetupAttachment(Root);
-	ScreenPlane->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	ScreenPlane->SetCollisionProfileName(TEXT("NoCollision"));
 	ScreenPlane->SetCastShadow(false);
 	ScreenPlane->SetVisibility(false);
 

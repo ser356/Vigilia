@@ -69,7 +69,7 @@ AVGPlayerCharacter::AVGPlayerCharacter()
 
 	UCharacterMovementComponent* Move = GetCharacterMovement();
 	Move->MaxWalkSpeed = WalkSpeed;
-	Move->MaxAcceleration = 900.f;
+	Move->MaxAcceleration = 1400.f;
 	Move->BrakingDecelerationWalking = 1100.f;
 	Move->GroundFriction = 7.f;
 	Move->MaxStepHeight = 30.f;
@@ -218,7 +218,7 @@ void AVGPlayerCharacter::OnLook(const FInputActionValue& Value)
 	// heredadas de entrada (InputYawScale/InputPitchScale). Mouse2D da Y positiva hacia arriba.
 	if (AController* PC = GetController())
 	{
-		const float Scale = 0.14f * MouseSensitivity;
+		const float Scale = 0.4f * MouseSensitivity;
 		FRotator Rot = PC->GetControlRotation();
 		Rot.Yaw += Axis.X * Scale;
 		const float Pitch = FRotator::NormalizeAxis(Rot.Pitch) + Axis.Y * Scale * (bInvertLookY ? -1.f : 1.f);
