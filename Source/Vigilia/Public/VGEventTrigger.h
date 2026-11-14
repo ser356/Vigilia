@@ -49,7 +49,9 @@ enum class EVGEventAction : uint8
 	EntityWatch,
 	/** La entidad persigue al jugador. Offset.X = velocidad (cm/s), Offset.Y = segundos maximos. */
 	EntityChase,
-	EntityVanish
+	EntityVanish,
+	/** La entidad aparece en Offset.Location y corre hasta Location2 a Value cm/s; al llegar se esfuma. */
+	EntityRunTo
 };
 
 USTRUCT(BlueprintType)
@@ -75,6 +77,12 @@ struct FVGEventStep
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia", meta = (MultiLine = true))
 	FText Message;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia")
+	FVector Location2 = FVector::ZeroVector;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia")
+	float Value = 0.f;
+
 	/** Espera a que el jugador NO este mirando al Target para ejecutarse (reintenta hasta 40 s). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia")
 	bool bOnlyWhenUnseen = false;
@@ -98,6 +106,10 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Vigilia|Events")
 	void SetBoxExtent(FVector Extent);
+
+	/** La entidad cruza corriendo de From a To. */
+	UFUNCTION(BlueprintCallable, Category = "Vigilia|Events")
+	void AddEntityRunStep(float Delay, AActor* Entity, FVector From, FVector To, float Speed);
 
 	/** Paso con texto (para ShowMessage). */
 	UFUNCTION(BlueprintCallable, Category = "Vigilia|Events")

@@ -45,6 +45,10 @@ Para cada uno: **Add to My Library** en fab.com y despues **Add to Project** des
 |  | rug | [Old Carpet](https://www.fab.com/listings/f6a088c6-6325-41fe-804f-86c572834b7a) | Quixel Megascans |
 |  | curtain_fabric | [Furniture Fabric](https://www.fab.com/listings/83ff7c89-d525-4fae-bd8c-4f18dac106a8) | Quixel Megascans |
 | Opcional | entity | [Madre Statue MEDPOLY](https://www.fab.com/listings/32cab428-889e-49e9-8c89-2ea78696aca2) | sixonetwo (CC-BY: citar al autor en los creditos) |
+| **Imprescindible** | entidades (personaje animado) | [Zombie Female: Nurse](https://www.fab.com/listings/35246f73-70ca-41ac-816b-55ead87dbcbc) | RamsterZ |
 
 Mientras falte alguno, el script usa un respaldo CC0 de Poly Haven si existe (ejecuta `python3 Tools/fetch_polyhaven.py`).
 El contenido de Fab no se versiona en git (`Content/Fab/` esta en `.gitignore`).
+
+Las entidades usan el primer personaje con esqueleto que encuentren en el proyecto, con sus animaciones de idle, andar y correr.
+Alternativa sin Fab: en el editor, Add > Add Feature or Content Pack > Third Person (maniqui de Unreal; se muestra como silueta negra).
