@@ -22,6 +22,7 @@ TW = 10.0
 CORR_X0, CORR_X1, CORR_Y0, CORR_Y1 = -720.0, 720.0, -355.0, -HY - T   # pasillo de 14 m
 HOUSE_BOTTOM = -735.0
 MIN_DOOR_W = 88.0   # ancho minimo de hoja: si el modelo es mas estrecho se ensancha
+DOOR_LEAF_W = [0.0]  # ancho final de la hoja (lo fija build_shell y lo usan todas las puertas)
 JAMB = 6.0   # ancho de las jambas de las puertas
 
 actor_sub = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
@@ -413,9 +414,8 @@ def build_shell(res, mats):
         door_w, door_t, door_h = horizontal_dims(door_res)
         door_h = min(door_h, H - 6.0)
         # Paso libre minimo: con la hoja abierta (grosor + pomo) el jugador necesita ~80 cm.
-        if door_w < MIN_DOOR_W:
-            STATE["door_scale"] = MIN_DOOR_W / door_w
-            door_w = MIN_DOOR_W
+        door_w = max(door_w, MIN_DOOR_W)
+        DOOR_LEAF_W[0] = door_w
     else:
         door_w, door_t, door_h = 82.5, 4.0, 203.0
     door_x0 = 250.0 - 12.0 - door_w
@@ -476,9 +476,8 @@ def build_door(res, mats, info):
     door = actor_sub.spawn_actor_from_class(door_cls, V(d["x0"], leaf_y, 1.0), R(yaw=-90.0))
     door_res = res.get("door")
     if door_res:
-        door.setup_door_mesh(group_for(door_res).main)
+        door.setup_door_mesh(group_for(door_res).main, DOOR_LEAF_W[0])
         STATE["used"]["door"] = door_res
-        widen_door(door)
     else:
         # Prototipo: hoja lisa hasta que se anada la puerta de Megascans desde Fab.
         door.setup_door_mesh(eal.load_asset("/Engine/BasicShapes/Cube"))
@@ -1377,15 +1376,6 @@ def house_door_frame(name, axis, c0, c1, f0, f1, mats):
         box(name + "_jt", (f0 - 1.5, c0, DOOR_H + 1.0), (f1 + 1.5, c1, top), mats["trim"])
 
 
-def widen_door(door):
-    """Ensancha la hoja escalando la BISAGRA (no el actor): la escala gira con la hoja. Escalar el actor
-    deformaba la puerta al abrirse (cizalla) y la convertia en un bloque que tapaba el paso."""
-    scale = STATE.get("door_scale", 1.0)
-    if scale != 1.0:
-        hinge = door.get_editor_property("hinge")
-        hinge.set_relative_scale3d(V(1.0, scale, 1.0))
-
-
 def spawn_house_door(key, axis, along0, wall_center, res, mats, locked=False):
     """Hoja con bisagra en along0; para paredes a lo largo de X la hoja avanza en +X, en Y en +Y."""
     yaw = -90.0 if axis == "X" else 0.0
@@ -1393,8 +1383,7 @@ def spawn_house_door(key, axis, along0, wall_center, res, mats, locked=False):
     door = actor_sub.spawn_actor_from_class(unreal.VGDoor, loc, R(yaw=yaw))
     door_res = res.get("door")
     if door_res:
-        door.setup_door_mesh(group_for(door_res).main)
-        widen_door(door)
+        door.setup_door_mesh(group_for(door_res).main, DOOR_LEAF_W[0])
     else:
         door.setup_door_mesh(eal.load_asset("/Engine/BasicShapes/Cube"))
         mesh = door.get_editor_property("mesh")
@@ -1446,6 +1435,8 @@ def build_house(res, mats, info, out):
         w, _t, h = horizontal_dims(res["door"])
         if 60.0 <= w <= 110.0:
             DOOR_W = max(w, MIN_DOOR_W)
+        if DOOR_LEAF_W[0] > 0.0:
+            DOOR_W = DOOR_LEAF_W[0]
         if 180.0 <= h <= H - 25.0:
             DOOR_H = h
 
@@ -1732,7 +1723,7 @@ def build():
     else:
         STATE["overrides"] = load_json("layout_overrides.json", {}) or {}
     STATE["unverified"], STATE["blockouts"], STATE["used"] = [], [], {}
-    STATE["door_scale"] = 1.0
+    DOOR_LEAF_W[0] = 0.0
     del WARNINGS[:]
 
     with unreal.ScopedSlowTask(8, "Vigilia: construyendo el salon") as task:

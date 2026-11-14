@@ -12,7 +12,7 @@ AVGDoor::AVGDoor()
 	Prompt = NSLOCTEXT("Vigilia", "Door", "Puerta");
 }
 
-FVector AVGDoor::SetupDoorMesh(UStaticMesh* InMesh)
+FVector AVGDoor::SetupDoorMesh(UStaticMesh* InMesh, float TargetWidth)
 {
 	Modify();
 	Mesh->Modify();
@@ -63,7 +63,13 @@ FVector AVGDoor::SetupDoorMesh(UStaticMesh* InMesh)
 
 	const FVector Offset(-(R.Min.X + R.Max.X) * 0.5f, -R.Min.Y, -R.Min.Z);
 	Mesh->SetRelativeLocationAndRotation(Offset, Rot);
-	return R.GetSize();
+
+	// Ancho exacto de la hoja: se escala la bisagra (gira con la hoja, sin deformarla).
+	Hinge->Modify();
+	const double Width = FMath::Max(R.Max.Y - R.Min.Y, 1.0);
+	const double ScaleY = TargetWidth > 1.f ? TargetWidth / Width : 1.0;
+	Hinge->SetRelativeScale3D(FVector(1.0, ScaleY, 1.0));
+	return FVector(R.Max.X - R.Min.X, Width * ScaleY, R.Max.Z - R.Min.Z);
 }
 
 FText AVGDoor::GetInteractionPrompt_Implementation(AActor* Interactor) const
@@ -127,6 +133,7 @@ void AVGDoor::CloseDoor(bool bSlam)
 
 void AVGDoor::StartMove(float NewTargetYaw, float Duration)
 {
+	Mesh->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
 	StartYaw = Hinge->GetRelativeRotation().Yaw;
 	TargetYaw = NewTargetYaw;
 	MoveDuration = FMath::Max(Duration, 0.05f);
@@ -145,6 +152,8 @@ void AVGDoor::Tick(float DeltaSeconds)
 	if (MoveAlpha >= 1.f)
 	{
 		SetActorTickEnabled(false);
+		// Cerrada: vuelve a bloquear al jugador. Abierta: no estorba nunca el paso.
+		Mesh->SetCollisionResponseToChannel(ECC_Pawn, bOpen ? ECR_Ignore : ECR_Block);
 		if (bPendingSlam)
 		{
 			PlayLocalSound(SlamSound ? SlamSound.Get() : CloseSound.Get(), 1.f);

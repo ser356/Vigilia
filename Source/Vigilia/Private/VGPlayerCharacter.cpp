@@ -23,7 +23,8 @@ AVGPlayerCharacter::AVGPlayerCharacter()
 	PrimaryActorTick.bCanEverTick = true;
 
 	// Persona de ~1,78 m con los ojos a ~1,65 m.
-	GetCapsuleComponent()->InitCapsuleSize(30.f, 89.f);
+	// Radio 26: hombros de un adulto; con 30 se enganchaba en marcos de puerta estrechos.
+	GetCapsuleComponent()->InitCapsuleSize(26.f, 89.f);
 
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->SetupAttachment(GetCapsuleComponent());

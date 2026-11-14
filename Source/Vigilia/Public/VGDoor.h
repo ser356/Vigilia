@@ -22,7 +22,7 @@ public:
 
 	/** Coloca la malla para que gire por su canto, sea cual sea su pivote o eje original. Devuelve (grosor, ancho, alto). */
 	UFUNCTION(BlueprintCallable, Category = "Vigilia|Door")
-	FVector SetupDoorMesh(UStaticMesh* InMesh);
+	FVector SetupDoorMesh(UStaticMesh* InMesh, float TargetWidth = 0.f);
 
 	/** DirectionSign: +1 o -1, hacia que lado abre. */
 	UFUNCTION(BlueprintCallable, Category = "Vigilia|Door")
