@@ -1,0 +1,69 @@
+From 21137a19306b3ca3096621b02c32b3a7485800b2 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 14 Nov 2026 03:01:29 +0000
+Subject: [PATCH] Puertas: la hoja se ensancha en su propio eje (antes
+ engordaba el grosor)
+
+Causa encontrada en los datos de L_LivingRoom.umap: las seis puertas tienen la malla
+girada -90 grados y la bisagra con escala (1, 1.249, 1). Unreal combina las escalas de
+padre e hijo eje a eje sin considerar el giro del hijo, asi que esa escala se aplicaba
+al grosor de la hoja y el ancho seguia en 70,5 cm dentro de un hueco de 88.
+
+- SetupDoorMesh escala la malla en su eje de ancho local y deja la bisagra a escala 1
+- Los huecos de las puertas del pasillo usan la altura real de la hoja (240 cm)
+
+Co-Authored-By: Claude Fable 5.2 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01FSNh57Q72v7GgUik5hM21o
+---
+ Scripts/vg_room.py                |  4 +++-
+ Source/Vigilia/Private/VGDoor.cpp | 17 +++++++++++------
+ 2 files changed, 14 insertions(+), 7 deletions(-)
+
+diff --git a/Scripts/vg_room.py b/Scripts/vg_room.py
+index 8c2717e..f409a07 100644
+--- a/Scripts/vg_room.py
++++ b/Scripts/vg_room.py
+@@ -1441,7 +1441,9 @@ def build_house(res, mats, info, out):
+             DOOR_W = max(w, MIN_DOOR_W)
+         if DOOR_LEAF_W[0] > 0.0:
+             DOOR_W = DOOR_LEAF_W[0]
+-        if 180.0 <= h <= H - 25.0:
++        # La puerta de Megascans mide ~240 cm de alto: se respeta (antes el limite era 230 y los huecos
++        # del pasillo se quedaban en 205, con la hoja metida en la pared por arriba).
++        if 180.0 <= h <= H - 8.0:
+             DOOR_H = h
+ 
+     def hole(c):
+diff --git a/Source/Vigilia/Private/VGDoor.cpp b/Source/Vigilia/Private/VGDoor.cpp
+index 8f01eb6..270b4c5 100644
+--- a/Source/Vigilia/Private/VGDoor.cpp
++++ b/Source/Vigilia/Private/VGDoor.cpp
+@@ -89,14 +89,19 @@ FVector AVGDoor::SetupDoorMesh(UStaticMesh* InMesh, float TargetWidth)
+ 		}
+ 	}
+ 
+-	const FVector Offset(-(R.Min.X + R.Max.X) * 0.5f, -LeafMinY, -R.Min.Z);
+-	Mesh->SetRelativeLocationAndRotation(Offset, Rot);
+-
+-	// Ancho exacto de la hoja: se escala la bisagra (gira con la hoja, sin deformarla).
+-	Hinge->Modify();
++	// Ancho exacto de la hoja. La escala se aplica a la MALLA, en su propio eje de ancho.
++	// (Unreal multiplica las escalas de padre e hijo eje a eje sin tener en cuenta el giro del hijo:
++	// escalar la bisagra en Y, con la malla girada 90 grados, engordaba el grosor en vez del ancho.)
+ 	const double Width = FMath::Max(LeafMaxY - LeafMinY, 1.0);
+ 	const double ScaleY = TargetWidth > 1.f ? TargetWidth / Width : 1.0;
+-	Hinge->SetRelativeScale3D(FVector(1.0, ScaleY, 1.0));
++	const bool bWidthIsLocalX = FMath::Abs(FMath::Cos(FMath::DegreesToRadians(Rot.Yaw))) < 0.5;
++	Hinge->Modify();
++	Hinge->SetRelativeScale3D(FVector::OneVector);
++	Mesh->SetRelativeScale3D(bWidthIsLocalX ? FVector(ScaleY, 1.0, 1.0) : FVector(1.0, ScaleY, 1.0));
++
++	// Canto de la bisagra en el origen (la coordenada Y ya escalada), grosor centrado, base en Z = 0.
++	const FVector Offset(-(R.Min.X + R.Max.X) * 0.5, -LeafMinY * ScaleY, -R.Min.Z);
++	Mesh->SetRelativeLocationAndRotation(Offset, Rot);
+ 	return FVector(R.Max.X - R.Min.X, Width * ScaleY, R.Max.Z - R.Min.Z);
+ }
+ 
+-- 
+2.43.0
+
