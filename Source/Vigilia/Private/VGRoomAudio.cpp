@@ -43,7 +43,6 @@ void AVGRoomAudio::BeginPlay()
 	Reverb->LateGain = 1.1f;
 	Reverb->LateDelay = 0.012f;
 	Reverb->AirAbsorptionGainHF = 0.994f;
-	Reverb->RoomRolloffFactor = 0.f;
 
 	Box->OnComponentBeginOverlap.AddDynamic(this, &AVGRoomAudio::HandleOverlap);
 
