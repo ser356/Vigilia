@@ -95,7 +95,11 @@ void AVGDoor::Interact_Implementation(AActor* Interactor)
 	else
 	{
 		float Sign = 1.f;
-		if (bOpenAwayFromInteractor && Interactor)
+		if (PreferredOpenSign != 0.f)
+		{
+			Sign = PreferredOpenSign > 0.f ? 1.f : -1.f;
+		}
+		else if (bOpenAwayFromInteractor && Interactor)
 		{
 			const FVector ToInteractor = Interactor->GetActorLocation() - GetActorLocation();
 			// Yaw positivo lleva el canto libre (+Y) hacia -X: se usa cuando el jugador esta en +X.

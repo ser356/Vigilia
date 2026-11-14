@@ -490,6 +490,8 @@ def build_door(res, mats, info):
     safe_set(door, "close_sound", sfx("door_close"))
     safe_set(door, "slam_sound", sfx("door_slam"))
     safe_set(door, "locked_sound", sfx("door_locked"))
+    # Abre hacia dentro del salon (local -X = +Y del mundo): abierta hacia el pasillo lo taponaba.
+    safe_set(door, "preferred_open_sign", 1.0)
     mark(door, "door", "Interactables")
     return door
 
@@ -1376,7 +1378,7 @@ def house_door_frame(name, axis, c0, c1, f0, f1, mats):
         box(name + "_jt", (f0 - 1.5, c0, DOOR_H + 1.0), (f1 + 1.5, c1, top), mats["trim"])
 
 
-def spawn_house_door(key, axis, along0, wall_center, res, mats, locked=False):
+def spawn_house_door(key, axis, along0, wall_center, res, mats, locked=False, open_sign=0.0):
     """Hoja con bisagra en along0; para paredes a lo largo de X la hoja avanza en +X, en Y en +Y."""
     yaw = -90.0 if axis == "X" else 0.0
     loc = V(along0, wall_center, 1.0) if axis == "X" else V(wall_center, along0, 1.0)
@@ -1396,6 +1398,8 @@ def spawn_house_door(key, axis, along0, wall_center, res, mats, locked=False):
     safe_set(door, "locked_sound", sfx("door_locked"))
     if locked:
         door.set_locked(True)
+    if open_sign:
+        safe_set(door, "preferred_open_sign", open_sign)
     mark(door, key, "House/Doors")
     return door
 
@@ -1486,7 +1490,9 @@ def build_house(res, mats, info, out):
         c0, c1 = c - DOOR_W * 0.5 - JAMB - 1.0, c + DOOR_W * 0.5 + JAMB + 1.0
         house_door_frame("frame_" + key, axis, c0, c1, f0, f1, mats)
         locked = key in ("door_bathroom", "door_front")
-        house["doors"][key] = spawn_house_door(key, axis, c - DOOR_W * 0.5, wall_c, res, mats, locked)
+        # Todas abren hacia dentro de su estancia, nunca hacia el pasillo (ver signos en VGDoor).
+        open_sign = {"door_front": 1.0}.get(key, -1.0)
+        house["doors"][key] = spawn_house_door(key, axis, c - DOOR_W * 0.5, wall_c, res, mats, locked, open_sign)
     if res.get("door"):
         STATE["used"]["door"] = res["door"]
 

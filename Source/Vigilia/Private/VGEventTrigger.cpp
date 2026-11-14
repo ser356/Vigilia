@@ -228,7 +228,7 @@ void AVGEventTrigger::ExecuteStep(int32 Index)
 			// Las puertas que se abren solas lo hacen despacio y solo un poco.
 			const float Saved = Door->OpenAngle;
 			Door->OpenAngle = 22.f;
-			Door->OpenDoor(1.f, 3.2f);
+			Door->OpenDoor(Door->PreferredOpenSign != 0.f ? Door->PreferredOpenSign : 1.f, 3.2f);
 			Door->OpenAngle = Saved;
 		}
 		break;

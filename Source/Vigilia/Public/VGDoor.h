@@ -57,6 +57,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Door")
 	bool bOpenAwayFromInteractor = true;
 
+	/** Si es +1 o -1, la puerta abre SIEMPRE hacia ese lado (p. ej. hacia dentro de la habitacion,
+	 *  como en una casa real, para no taponar el pasillo). 0 = abre alejandose del jugador. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Door")
+	float PreferredOpenSign = 0.f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Audio")
 	TObjectPtr<USoundBase> OpenSound;
 
