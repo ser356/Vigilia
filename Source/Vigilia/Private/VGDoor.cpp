@@ -89,14 +89,19 @@ FVector AVGDoor::SetupDoorMesh(UStaticMesh* InMesh, float TargetWidth)
 		}
 	}
 
-	const FVector Offset(-(R.Min.X + R.Max.X) * 0.5f, -LeafMinY, -R.Min.Z);
-	Mesh->SetRelativeLocationAndRotation(Offset, Rot);
-
-	// Ancho exacto de la hoja: se escala la bisagra (gira con la hoja, sin deformarla).
-	Hinge->Modify();
+	// Ancho exacto de la hoja. La escala se aplica a la MALLA, en su propio eje de ancho.
+	// (Unreal multiplica las escalas de padre e hijo eje a eje sin tener en cuenta el giro del hijo:
+	// escalar la bisagra en Y, con la malla girada 90 grados, engordaba el grosor en vez del ancho.)
 	const double Width = FMath::Max(LeafMaxY - LeafMinY, 1.0);
 	const double ScaleY = TargetWidth > 1.f ? TargetWidth / Width : 1.0;
-	Hinge->SetRelativeScale3D(FVector(1.0, ScaleY, 1.0));
+	const bool bWidthIsLocalX = FMath::Abs(FMath::Cos(FMath::DegreesToRadians(Rot.Yaw))) < 0.5;
+	Hinge->Modify();
+	Hinge->SetRelativeScale3D(FVector::OneVector);
+	Mesh->SetRelativeScale3D(bWidthIsLocalX ? FVector(ScaleY, 1.0, 1.0) : FVector(1.0, ScaleY, 1.0));
+
+	// Canto de la bisagra en el origen (la coordenada Y ya escalada), grosor centrado, base en Z = 0.
+	const FVector Offset(-(R.Min.X + R.Max.X) * 0.5, -LeafMinY * ScaleY, -R.Min.Z);
+	Mesh->SetRelativeLocationAndRotation(Offset, Rot);
 	return FVector(R.Max.X - R.Min.X, Width * ScaleY, R.Max.Z - R.Min.Z);
 }
 
