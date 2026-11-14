@@ -583,40 +583,6 @@
    "max_tex": 1024,
    "size_cm": 23
   },
-  "coat_stand": {
-   "category": "Decor",
-   "sources": [
-    {
-     "type": "fab",
-     "title": "Wooden Standing Coat Hanger",
-     "seller": "Quixel Megascans",
-     "url": "https://www.fab.com/listings/b8252c32-a7bb-4d0c-a480-181a6648f915",
-     "license": "Fab Standard License",
-     "price_usd": 0.0,
-     "kind": "3d-model"
-    }
-   ],
-   "collision": "none",
-   "max_tex": 1024,
-   "size_cm": 180
-  },
-  "dress": {
-   "category": "Decor",
-   "sources": [
-    {
-     "type": "fab",
-     "title": "Urban Shanty Town Dress Fabric Worn",
-     "seller": "Quixel Megascans",
-     "url": "https://www.fab.com/listings/51bb3f4a-40b4-4bdd-b87a-f8e47a7bfc5d",
-     "license": "Fab Standard License",
-     "price_usd": 0.0,
-     "kind": "3d-model"
-    }
-   ],
-   "collision": "none",
-   "max_tex": 1024,
-   "size_cm": 110
-  },
   "bust": {
    "category": "Decor",
    "sources": [
@@ -868,6 +834,405 @@
    "collision": "none",
    "max_tex": 512,
    "size_cm": 11
+  },
+  "entity": {
+   "category": "Entity",
+   "sources": [
+    {
+     "type": "fab",
+     "title": "Madre Statue MEDPOLY",
+     "seller": "sixonetwo",
+     "url": "https://www.fab.com/listings/32cab428-889e-49e9-8c89-2ea78696aca2",
+     "license": "CC-BY",
+     "price_usd": 0.0,
+     "kind": "3d-model"
+    },
+    {
+     "type": "polyhaven",
+     "id": "gothic_statue",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/gothic_statue",
+     "license": "CC0"
+    }
+   ],
+   "collision": "none",
+   "max_tex": 512,
+   "size_cm": 175
+  },
+  "d_pillows": {
+   "category": "Decor/Dressing",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "throw_pillows_01",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/throw_pillows_01",
+     "license": "CC0"
+    }
+   ],
+   "collision": "none",
+   "max_tex": 1024,
+   "size_cm": 94
+  },
+  "d_basket": {
+   "category": "Decor/Dressing",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "wicker_basket_01",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/wicker_basket_01",
+     "license": "CC0"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 1024,
+   "size_cm": 38
+  },
+  "d_cigs": {
+   "category": "Decor/Dressing",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "cigarette_pack",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/cigarette_pack",
+     "license": "CC0"
+    }
+   ],
+   "collision": "none",
+   "max_tex": 1024,
+   "size_cm": 10
+  },
+  "d_lighter": {
+   "category": "Decor/Dressing",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "vintage_lighter",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/vintage_lighter",
+     "license": "CC0"
+    }
+   ],
+   "collision": "none",
+   "max_tex": 1024,
+   "size_cm": 8
+  },
+  "d_glasses": {
+   "category": "Decor/Dressing",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "round_spectacles",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/round_spectacles",
+     "license": "CC0"
+    }
+   ],
+   "collision": "none",
+   "max_tex": 1024,
+   "size_cm": 16
+  },
+  "d_wallclock": {
+   "category": "Decor/Dressing",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "wall_clock",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/wall_clock",
+     "license": "CC0"
+    }
+   ],
+   "collision": "none",
+   "max_tex": 1024,
+   "size_cm": 32
+  },
+  "d_hallframe": {
+   "category": "Decor/Dressing",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "fancy_picture_frame_02",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/fancy_picture_frame_02",
+     "license": "CC0"
+    }
+   ],
+   "collision": "none",
+   "max_tex": 1024,
+   "size_cm": 77
+  },
+  "d_hallframe2": {
+   "category": "Decor/Dressing",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "hanging_picture_frame_01",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/hanging_picture_frame_01",
+     "license": "CC0"
+    }
+   ],
+   "collision": "none",
+   "max_tex": 1024,
+   "size_cm": 84
+  },
+  "d_kcabinet": {
+   "category": "Decor/Dressing",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "painted_wooden_cabinet",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/painted_wooden_cabinet",
+     "license": "CC0"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 1024,
+   "size_cm": 120
+  },
+  "d_trash": {
+   "category": "Decor/Dressing",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "metal_trash_can",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/metal_trash_can",
+     "license": "CC0"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 1024,
+   "size_cm": 178
+  },
+  "d_teaset": {
+   "category": "Decor/Dressing",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "tea_set_01",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/tea_set_01",
+     "license": "CC0"
+    }
+   ],
+   "collision": "none",
+   "max_tex": 1024,
+   "size_cm": 92
+  },
+  "d_bowl": {
+   "category": "Decor/Dressing",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "wooden_bowl_01",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/wooden_bowl_01",
+     "license": "CC0"
+    }
+   ],
+   "collision": "none",
+   "max_tex": 1024,
+   "size_cm": 31
+  },
+  "d_bottles": {
+   "category": "Decor/Dressing",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "wine_bottles_01",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/wine_bottles_01",
+     "license": "CC0"
+    }
+   ],
+   "collision": "none",
+   "max_tex": 1024,
+   "size_cm": 68
+  },
+  "d_pot": {
+   "category": "Decor/Dressing",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "pot_enamel_01",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/pot_enamel_01",
+     "license": "CC0"
+    }
+   ],
+   "collision": "none",
+   "max_tex": 1024,
+   "size_cm": 26
+  },
+  "d_kbasket": {
+   "category": "Decor/Dressing",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "wicker_basket_02",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/wicker_basket_02",
+     "license": "CC0"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 1024,
+   "size_cm": 35
+  },
+  "d_broom": {
+   "category": "Decor/Dressing",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "wooden_bucket_01",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/wooden_bucket_01",
+     "license": "CC0"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 1024,
+   "size_cm": 55
+  },
+  "d_plunger": {
+   "category": "Decor/Dressing",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "plunger",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/plunger",
+     "license": "CC0"
+    }
+   ],
+   "collision": "none",
+   "max_tex": 1024,
+   "size_cm": 42
+  },
+  "d_bleach": {
+   "category": "Decor/Dressing",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "bleach_bottle",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/bleach_bottle",
+     "license": "CC0"
+    }
+   ],
+   "collision": "none",
+   "max_tex": 1024,
+   "size_cm": 29
+  },
+  "d_cleaner": {
+   "category": "Decor/Dressing",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "all_purpose_cleaner",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/all_purpose_cleaner",
+     "license": "CC0"
+    }
+   ],
+   "collision": "none",
+   "max_tex": 1024,
+   "size_cm": 32
+  },
+  "d_stool": {
+   "category": "Decor/Dressing",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "metal_stool_01",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/metal_stool_01",
+     "license": "CC0"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 1024,
+   "size_cm": 88
+  },
+  "d_duck": {
+   "category": "Decor/Dressing",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "rubber_duck_toy",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/rubber_duck_toy",
+     "license": "CC0"
+    }
+   ],
+   "collision": "none",
+   "max_tex": 1024,
+   "size_cm": 30
+  },
+  "d_rocking": {
+   "category": "Decor/Dressing",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "Rockingchair_01",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/Rockingchair_01",
+     "license": "CC0"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 1024,
+   "size_cm": 100
+  },
+  "d_suitcase": {
+   "category": "Decor/Dressing",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "vintage_suitcase",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/vintage_suitcase",
+     "license": "CC0"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 1024,
+   "size_cm": 161
+  },
+  "d_ottoman": {
+   "category": "Decor/Dressing",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "Ottoman_01",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/Ottoman_01",
+     "license": "CC0"
+    }
+   ],
+   "collision": "box",
+   "max_tex": 1024,
+   "size_cm": 88
+  },
+  "d_alarm": {
+   "category": "Decor/Dressing",
+   "sources": [
+    {
+     "type": "polyhaven",
+     "id": "alarm_clock_01",
+     "res": "1k",
+     "url": "https://polyhaven.com/a/alarm_clock_01",
+     "license": "CC0"
+    }
+   ],
+   "collision": "none",
+   "max_tex": 1024,
+   "size_cm": 17
   }
  },
  "surfaces": {

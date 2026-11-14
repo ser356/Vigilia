@@ -4,6 +4,7 @@
 #include "VGDoor.h"
 #include "VGStatics.h"
 #include "VGPhone.h"
+#include "VGEntity.h"
 #include "VGPlayerCharacter.h"
 #include "VGLoopSubsystem.h"
 #include "Components/AudioComponent.h"
@@ -335,6 +336,31 @@ void AVGEventTrigger::ExecuteStep(int32 Index)
 		{
 			const float Duration = Step.Offset.GetLocation().X > 0.1 ? static_cast<float>(Step.Offset.GetLocation().X) : 4.f;
 			Loop->ShowMessage(Step.Message, Duration);
+		}
+		break;
+	case EVGEventAction::EntityAppear:
+	case EVGEventAction::EntityWatch:
+	case EVGEventAction::EntityChase:
+	case EVGEventAction::EntityVanish:
+		if (AVGEntity* Entity = Cast<AVGEntity>(Target))
+		{
+			const FVector P = Step.Offset.GetLocation();
+			if (Step.Action == EVGEventAction::EntityAppear)
+			{
+				Entity->Appear(P);
+			}
+			else if (Step.Action == EVGEventAction::EntityWatch)
+			{
+				Entity->Watch(static_cast<float>(P.X), static_cast<float>(P.Y));
+			}
+			else if (Step.Action == EVGEventAction::EntityChase)
+			{
+				Entity->Chase(static_cast<float>(P.X), static_cast<float>(P.Y));
+			}
+			else
+			{
+				Entity->Vanish(false);
+			}
 		}
 		break;
 	case EVGEventAction::FireTrigger:

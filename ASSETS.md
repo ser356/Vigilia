@@ -12,8 +12,6 @@ Para cada uno: **Add to My Library** en fab.com y despues **Add to Project** des
 | **Imprescindible** | floor_lamp | [Wooden Floor Lamp](https://www.fab.com/listings/a8534003-b8e6-4eea-bf9e-9eecd9fedc47) | Quixel Megascans |
 | **Imprescindible** | door | [Urban Miscellaneous Door Interior Mixed Modern 02](https://www.fab.com/listings/297f9432-c01d-4154-8c1a-8d23d3d3f0c3) | Quixel Megascans |
 | **Imprescindible** | window | [Urban Miscellaneous Window Interior Mixed Weathered 03](https://www.fab.com/listings/26a02cd8-fa99-4d25-bde1-5d22e4b3a0bc) | Quixel Megascans |
-| **Imprescindible** | coat_stand | [Wooden Standing Coat Hanger](https://www.fab.com/listings/b8252c32-a7bb-4d0c-a480-181a6648f915) | Quixel Megascans |
-| **Imprescindible** | dress | [Urban Shanty Town Dress Fabric Worn](https://www.fab.com/listings/51bb3f4a-40b4-4bdd-b87a-f8e47a7bfc5d) | Quixel Megascans |
 | **Imprescindible** | bust | [Female Bust Statuette](https://www.fab.com/listings/e47ee8d9-8b33-4a2d-b591-dd0c187ca5bc) | Quixel Megascans |
 | **Imprescindible** | bed | [Residential European Rural Furniture Bed Wood Single](https://www.fab.com/listings/89b48726-c79c-460a-8aa1-5bbd2eaa7fbd) | Quixel Megascans |
 | **Imprescindible** | kitchen_cabinet | [Urban Miscellaneous Cabinet Kitchen Wood Worn](https://www.fab.com/listings/ca1b70b5-3002-4326-887f-b45f8df2553c) | Quixel Megascans |
@@ -46,6 +44,7 @@ Para cada uno: **Add to My Library** en fab.com y despues **Add to Project** des
 |  | towel | [Urban Trash Towel Dirty Fabric Old](https://www.fab.com/listings/e9f9bbd2-588b-403d-80be-e5deadf33ac4) | Quixel Megascans |
 |  | rug | [Old Carpet](https://www.fab.com/listings/f6a088c6-6325-41fe-804f-86c572834b7a) | Quixel Megascans |
 |  | curtain_fabric | [Furniture Fabric](https://www.fab.com/listings/83ff7c89-d525-4fae-bd8c-4f18dac106a8) | Quixel Megascans |
+| Opcional | entity | [Madre Statue MEDPOLY](https://www.fab.com/listings/32cab428-889e-49e9-8c89-2ea78696aca2) | sixonetwo (CC-BY: citar al autor en los creditos) |
 
 Mientras falte alguno, el script usa un respaldo CC0 de Poly Haven si existe (ejecuta `python3 Tools/fetch_polyhaven.py`).
 El contenido de Fab no se versiona en git (`Content/Fab/` esta en `.gitignore`).
