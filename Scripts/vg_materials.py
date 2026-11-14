@@ -444,3 +444,16 @@ def surface_auto_master(default_base, default_normal, default_orm):
     _connect(_add(mat, _add(mat, nx_t, ny_t, -250, 480), nz_t, -180, 600), "", world_normal, "")
     _to_prop(world_normal, "", MP.MP_NORMAL)
     return _finish(mat)
+
+
+def dust_master():
+    """Motas de polvo: translucidas e iluminadas por las luces de la escena (invisibles a oscuras)."""
+    mat, created = _new_material("M_Dust")
+    if not created:
+        return mat
+    safe_set(mat, "blend_mode", unreal.BlendMode.BLEND_TRANSLUCENT)
+    safe_set(mat, "translucency_lighting_mode", unreal.TranslucencyLightingMode.TLM_VOLUMETRIC_NON_DIRECTIONAL)
+    safe_set(mat, "two_sided", True)
+    _to_prop(_vector(mat, "Color", (0.95, 0.9, 0.8, 1), -500, 0), "", MP.MP_BASE_COLOR)
+    _to_prop(_scalar(mat, "Opacity", 0.55, -500, 240), "", MP.MP_OPACITY)
+    return _finish(mat)

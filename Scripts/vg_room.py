@@ -361,6 +361,7 @@ def build_materials(res):
     mats["tv_opaque"] = vm.tv_screen_master(noise, False)
     mats["photo_master"] = vm.photo_master(defaults["BaseColor"])
     mats["canvas_master"] = vm.canvas_master(defaults["BaseColor"])
+    mats["dust"] = vm.dust_master()
 
     def surface(name, projection, **scalars):
         r = res.get(name)
@@ -616,10 +617,10 @@ def setup_television(tv, prep, mats):
     safe_set(tv, "static_loop_sound", sfx("tv_static_loop"))
     # Encendida desde el principio: la nieve es la luz principal del salon.
     set_bool(tv, "on", True)
-    safe_set(tv, "glow_lumens", 200.0)
+    safe_set(tv, "glow_lumens", 95.0)
 
 
-def setup_lamp(lamp, prep, lumens=80.0):
+def setup_lamp(lamp, prep, lumens=45.0):
     g = prep.group
     top = g.centroid(0.2) or [0.0, 0.0]
     local = V(g.center[0] + top[0] * g.size[0], g.center[1] + top[1] * g.size[1], g.min[2] + g.size[2] * 0.86)
@@ -909,7 +910,7 @@ def build_lighting(info):
     moon = spawn_marked(unreal.DirectionalLight, "moon", V(0, 600, 600), R(yaw=-78.0, pitch=-55.0))
     comp = moon.get_component_by_class(unreal.DirectionalLightComponent)
     comp.set_mobility(unreal.ComponentMobility.MOVABLE)
-    safe_set(comp, "intensity", 0.2)
+    safe_set(comp, "intensity", 0.08)
     safe_set(comp, "light_color", unreal.Color(r=168, g=192, b=255, a=255))
     safe_set(comp, "atmosphere_sun_light", True)
 
@@ -917,7 +918,7 @@ def build_lighting(info):
     comp = sky.get_component_by_class(unreal.SkyLightComponent)
     comp.set_mobility(unreal.ComponentMobility.MOVABLE)
     safe_set(comp, "real_time_capture", True)
-    safe_set(comp, "intensity", 0.12)
+    safe_set(comp, "intensity", 0.04)
     safe_set(comp, "light_color", unreal.Color(r=150, g=170, b=210, a=255))
 
     # Farola fria en la calle: entra en diagonal por la ventana y dibuja las cortinas en la pared.
@@ -928,7 +929,7 @@ def build_lighting(info):
     comp = street.get_component_by_class(unreal.SpotLightComponent)
     comp.set_mobility(unreal.ComponentMobility.MOVABLE)
     safe_set(comp, "intensity_units", unreal.LightUnits.LUMENS)
-    safe_set(comp, "intensity", 700.0)
+    safe_set(comp, "intensity", 320.0)
     safe_set(comp, "use_temperature", True)
     safe_set(comp, "temperature", 8500.0)
     safe_set(comp, "attenuation_radius", 1600.0)
@@ -956,7 +957,7 @@ def build_lighting(info):
         # ventana y siluetas (y la linterna, F).
         "auto_exposure_min_brightness": 0.0,
         "auto_exposure_max_brightness": 2.5,
-        "auto_exposure_bias": -0.5,
+        "auto_exposure_bias": -1.2,
         "auto_exposure_speed_up": 0.8,
         "auto_exposure_speed_down": 0.5,
         "bloom_intensity": 0.12,
@@ -1076,76 +1077,213 @@ def at(trigger_actor, x, y, z):
     return unreal.Transform(location=V(x - c.x, y - c.y, z - c.z))
 
 
-def build_loop_events(out, door, lamp, tv, dread, figure):
-    """Lo que cambia en cada vuelta al bucle del pasillo (estructura tipo P.T.)."""
+def spawn_entity():
+    """La presencia: una figura humana mostrada como silueta casi negra. Oculta hasta que un evento la llama."""
+    r = STATE.get("res", {}).get("entity")
+    mats = STATE.get("mats", {})
+    if not r or "paint" not in mats:
+        warn("Sin modelo para la entidad: no habra apariciones. Ejecuta Tools/fetch_polyhaven.py")
+        return None
+    g = group_for(r)
+    STATE["used"]["entity"] = r
+    height = max(g.size[2], 1.0)
+    scale = 1.0 if 150.0 <= height <= 200.0 else 175.0 / height
+    front, _ = front_direction(r, g, STATE["metrics"])
+    silhouette = vm.instance("MI_Paint_Entity", mats["paint"], None, {"Roughness": 0.7, "Metallic": 0.0},
+                             {"Color": (0.003, 0.003, 0.004, 1)})
+    actor = actor_sub.spawn_actor_from_class(unreal.VGEntity, V(0.0, 0.0, -1500.0), R())
+    actor.setup_entity(g.main, silhouette, V(-g.center[0] * scale, -g.center[1] * scale, -g.min[2] * scale),
+                       -yaw_of(front), scale)
+    safe_set(actor, "chase_loop_sound", sfx("tv_static_loop"))
+    safe_set(actor, "catch_sound", sfx("door_slam"))
+    for lamp in (STATE.get("house") or {}).get("lamps", {}).values():
+        actor.add_linked_lamp(lamp)
+    mark(actor, "entity", "Events")
+    return actor
+
+
+def build_story_events(out, door, lamp, tv, dread, entity):
+    """Progresion por exploracion (sustituye al bucle del pasillo). Cada zona se dispara una vez.
+
+    Pasillo  Al salir del salon: hay alguien de pie al fondo del pasillo, mirandote. Si te acercas, se esfuma.
+    Dormit.  Al llegar junto a la cama: la linterna falla; al volverte, esta en la puerta. Se va al acercarte.
+    Cocina   El fluorescente parpadea, golpes dentro del bano... y el bano se abre solo.
+    Bano     Al entrar: se va la luz, las bombillas vuelven en rojo y algo viene hacia ti por el pasillo.
+             Te persigue hasta alcanzarte (pantalla en negro) o hasta que pasan unos segundos.
+             Despues, la puerta de entrada queda abierta: cruzarla es el final de la demo.
+    """
     house = STATE.get("house")
     if not house:
         return
     identity = unreal.Transform()
     doors, lamps = house["doors"], house["lamps"]
     bulbs = [lamps[k] for k in ("bulb_1", "bulb_2", "bulb_3") if k in lamps]
-    red = unreal.Transform(scale=V(1.0, 0.12, 0.08))
+    red = unreal.Transform(scale=V(1.0, 0.1, 0.06))
 
-    def loop(key, n):
-        return trigger(key, (0.0, 0.0, -2000.0), (10.0, 10.0, 10.0), required_loop=n, fire_on_overlap=False)
+    def loc(x, y):
+        return unreal.Transform(location=V(x, y, 0.0))
 
-    # 1a vuelta: todo parece igual... salvo que el salon ya no se abre y el telefono suena dentro.
-    t = loop("loop_1", 1)
-    t.add_step(action("DoorClose"), door, 0.0, None, identity, True)
-    t.add_step(action("DoorLock"), door, 0.5, None, identity, False)
-    phone = out.get("telephone")
-    if phone:
-        t.add_step(action("PhoneRing"), phone.actor, 6.0, None, identity, False)
+    def params(a, b):
+        return unreal.Transform(location=V(a, b, 0.0))
+
+    def zone(key, room, shrink=40.0, **props):
+        r = ROOMS[room]
+        cx, cy = (r["x0"] + r["x1"]) * 0.5, (r["y0"] + r["y1"]) * 0.5
+        return trigger(key, (cx, cy, 100.0), ((r["x1"] - r["x0"]) * 0.5 - shrink, (r["y1"] - r["y0"]) * 0.5 - shrink, 100.0), **props)
+
+    # --- Pasillo: la figura al fondo ---
+    d_x = STATE.get("salon_door_x", 190.0)
+    t = trigger("story_corridor", (d_x, CORR_YC, 100.0), (60.0, 45.0, 100.0), min_game_time=25.0)
+    if entity:
+        t.add_step(action("EntityAppear"), entity, 0.6, None, loc(-560.0, CORR_YC), False)
+        t.add_step(action("EntityWatch"), entity, 0.7, None, params(430.0, 14.0), False)
+    t.add_step(action("AudioPlay"), dread, 0.6, None, identity, False)
+    t.add_step(action("AudioStop"), dread, 14.0, None, identity, False)
+
+    # --- Dormitorio: en la puerta, a tu espalda ---
+    b = ROOMS["bedroom"]
+    t = trigger("story_bedroom", (330.0, b["y0"] + 150.0, 100.0), (160.0, 110.0, 100.0))
+    t.add_step(action("FlashlightFail"), None, 1.5, None, unreal.Transform(location=V(3.5, 0, 0)), False)
+    t.add_step(action("SoundBehindPlayer"), None, 2.5, sfx("breath"), unreal.Transform(location=V(70, 0, 0)), False)
+    if entity:
+        t.add_step(action("EntityAppear"), entity, 3.0, None, loc(HOUSE_DOORS["door_bedroom"][2], b["y1"] - 45.0), False)
+        t.add_step(action("EntityWatch"), entity, 3.1, None, params(190.0, 12.0), False)
     if "door_bedroom" in doors:
-        t.add_step(action("DoorOpen"), doors["door_bedroom"], 14.0, None, identity, True)
+        t.add_step(action("DoorSlam"), doors["door_bedroom"], 16.0, None, identity, True)
 
-    # 2a vuelta: luz roja, golpes dentro del bano cerrado, la figura al fondo del pasillo.
-    t = loop("loop_2", 2)
-    for i, b in enumerate(bulbs):
-        t.add_step(action("LampColor"), b, 0.0, None, red, False)
-        t.add_step(action("LampFlicker"), b, 0.3 * i, None, identity, False)
+    # --- Cocina: el bano se abre ---
+    t = zone("story_kitchen", "kitchen", 90.0)
+    if "fluo_kitchen" in lamps:
+        t.add_step(action("LampOn"), lamps["fluo_kitchen"], 1.0, None, identity, False)
+        t.add_step(action("LampFlicker"), lamps["fluo_kitchen"], 1.2, None, unreal.Transform(scale=V(2.5, 1, 1)), False)
+        t.add_step(action("LampOff"), lamps["fluo_kitchen"], 6.0, None, identity, False)
     if "door_bathroom" in doors:
-        t.add_step(action("PlaySound"), doors["door_bathroom"], 5.0, sfx("door_knock"), identity, False)
-        t.add_step(action("PlaySound"), doors["door_bathroom"], 9.0, sfx("door_locked"), identity, False)
-    for actor in figure:
-        t.add_step(action("ToggleVisibility"), actor, 2.0, None, identity, True)
-    t.add_step(action("AudioPlay"), dread, 1.0, None, identity, False)
-    for actor in figure:
-        t.add_step(action("ToggleVisibility"), actor, 12.0, None, identity, True)
-    t.add_step(action("AudioStop"), dread, 20.0, None, identity, False)
+        t.add_step(action("PlaySound"), doors["door_bathroom"], 7.5, sfx("door_knock"), identity, False)
+        t.add_step(action("PlaySound"), doors["door_bathroom"], 11.0, sfx("door_locked"), identity, False)
+        t.add_step(action("DoorUnlock"), doors["door_bathroom"], 13.0, None, identity, False)
+        t.add_step(action("DoorOpen"), doors["door_bathroom"], 13.5, None, identity, False)
 
-    # 3a vuelta: casi a oscuras, susurros, la linterna falla y el bano se abre solo.
-    t = loop("loop_3", 3)
-    for b in bulbs[:2]:
-        t.add_step(action("LampOff"), b, 0.0, None, identity, False)
-    if len(bulbs) > 2:
-        t.add_step(action("LampFlicker"), bulbs[2], 1.0, None, identity, False)
-    t.add_step(action("AudioPlay"), dread, 0.5, None, identity, False)
-    t.add_step(action("SoundBehindPlayer"), None, 4.0, sfx("whisper"), unreal.Transform(location=V(70, 0, 0)), False)
-    t.add_step(action("FlashlightFail"), None, 7.0, None, unreal.Transform(location=V(5, 0, 0)), False)
-    if "door_bathroom" in doors:
-        t.add_step(action("DoorUnlock"), doors["door_bathroom"], 8.0, None, identity, False)
-        t.add_step(action("DoorOpen"), doors["door_bathroom"], 8.5, None, identity, False)
+    # --- Bano: la persecucion ---
+    t = zone("story_bathroom", "bathroom", 60.0)
     if "fluo_bathroom" in lamps:
-        t.add_step(action("LampColor"), lamps["fluo_bathroom"], 8.0, None, unreal.Transform(scale=V(0.75, 1.0, 0.85)), False)
-
-    # 4a vuelta: el fondo ya no lleva a ningun sitio; la puerta de entrada se abre. Final de la demo.
-    t = loop("loop_4", 4)
-    t.add_message_step(1.0, "No hay vuelta atras.", 4.0)
-    if "door_end" in doors:
-        t.add_step(action("DoorClose"), doors["door_end"], 0.0, None, identity, False)
-        t.add_step(action("DoorLock"), doors["door_end"], 0.5, None, identity, False)
+        t.add_step(action("LampOff"), lamps["fluo_bathroom"], 2.0, None, identity, False)
+    for bulb in bulbs:
+        t.add_step(action("LampOff"), bulb, 2.0, None, identity, False)
+        t.add_step(action("LampColor"), bulb, 4.5, None, red, False)
+        t.add_step(action("LampOn"), bulb, 5.0, None, identity, False)
+    t.add_step(action("FlashlightFail"), None, 2.0, None, unreal.Transform(location=V(4.0, 0, 0)), False)
+    t.add_step(action("AudioPlay"), dread, 2.5, None, identity, False)
+    if entity:
+        t.add_step(action("EntityAppear"), entity, 5.2, None, loc(560.0, CORR_YC), False)
+        t.add_step(action("EntityWatch"), entity, 5.3, None, params(0.0, 4.0), False)
+        t.add_step(action("EntityChase"), entity, 7.5, None, params(300.0, 11.0), False)
+    t.add_step(action("AudioStop"), dread, 21.0, None, identity, False)
+    for bulb in bulbs:
+        t.add_step(action("LampOff"), bulb, 20.0, None, identity, False)
     if "door_front" in doors:
-        t.add_step(action("DoorUnlock"), doors["door_front"], 3.0, None, identity, False)
-        t.add_step(action("DoorOpen"), doors["door_front"], 3.5, None, identity, False)
-    t.add_step(action("AudioStop"), dread, 6.0, None, identity, False)
-    ex = ROOMS["exit"]
-    end = trigger("loop_exit", ((ex["x0"] + ex["x1"]) * 0.5, CORR_YC, 100.0), (40.0, 55.0, 100.0))
-    end.add_step(action("FlashlightFail"), None, 0.0, None, unreal.Transform(location=V(30, 0, 0)), False)
+        t.add_step(action("DoorUnlock"), doors["door_front"], 22.0, None, identity, False)
+        t.add_step(action("DoorOpen"), doors["door_front"], 22.5, None, identity, False)
     if bulbs:
-        for b in bulbs:
-            end.add_step(action("LampOff"), b, 0.0, None, identity, False)
+        t.add_step(action("LampColor"), bulbs[0], 22.0, None, unreal.Transform(scale=V(1.0, 0.85, 0.6)), False)
+        t.add_step(action("LampOn"), bulbs[0], 23.0, None, identity, False)
+
+    # --- Salida: fin de la demo ---
+    ex = ROOMS["exit"]
+    end = trigger("story_exit", ((ex["x0"] + ex["x1"]) * 0.5, CORR_YC, 100.0), (40.0, 45.0, 100.0))
+    end.add_step(action("FlashlightFail"), None, 0.0, None, unreal.Transform(location=V(30, 0, 0)), False)
+    for bulb in bulbs:
+        end.add_step(action("LampOff"), bulb, 0.0, None, identity, False)
     end.add_message_step(1.5, "VIGILIA  -  Fin de la demo. Gracias por jugar.", 12.0)
+
+
+def dress_house(out):
+    """Decoracion extra con modelos CC0 de Poly Haven (se descargan solos, sin pasos manuales).
+    Todo va pegado a paredes o sobre muebles: el pasillo y los pasos de puerta quedan libres."""
+    res = STATE.get("res", {})
+
+    def prep(key, **kw):
+        r = res.get(key)
+        return Prep(key, r, **kw) if r else None
+
+    def wall(key, room, side, along, **kw):
+        p = prep(key, face_yaw=FACE[side], **kw)
+        if not p:
+            return None
+        x, y = against(p, room, side, along)
+        return p.spawn(x, y, 0.0, folder="Decor/Dressing")
+
+    def floor(key, x, y, face=None, yaw_extra=0.0):
+        p = prep(key, face_yaw=face, yaw_extra=yaw_extra) if face is not None else prep(key, yaw_extra=yaw_extra)
+        return p.spawn(x, y, 0.0, folder="Decor/Dressing") if p else None
+
+    def on(key, support, dx=0.0, dy=0.0, require_hit=False, **kw):
+        p = prep(key, **kw)
+        if not p or not support:
+            return None
+        return put_on(p, support, dx=dx, dy=dy, folder="Decor/Dressing", require_hit=require_hit)
+
+    def hang(key, room, side, along, center_z):
+        p = prep(key, face_yaw=FACE[side])
+        if not p:
+            return None
+        x, y = against(p, room, side, along, gap=0.3)
+        return p.spawn(x, y, center_z - p.h * 0.5, folder="Decor/Dressing", movable=True)
+
+    # Salon
+    on("d_pillows", out.get("sofa"), dy=-20.0, require_hit=True, long_axis="Y")
+    table = out.get("coffee_table")
+    if table:
+        on("d_cigs", table, dx=-table.wx * 0.25, dy=table.wy * 0.05, yaw_extra=33.0)
+        on("d_lighter", table, dx=-table.wx * 0.25, dy=table.wy * 0.05 + 9.0, yaw_extra=-20.0)
+    on("d_glasses", out.get("side_table"), dx=-6.0, dy=-8.0, yaw_extra=15.0)
+    floor("d_basket", -112.0, -HY + 30.0)
+
+    # Pasillo: solo en las paredes
+    hang("d_wallclock", "corridor", "N", -450.0, 170.0)
+    hang("d_hallframe", "corridor", "S", -320.0, 158.0)
+    hang("d_hallframe2", "corridor", "S", 480.0, 158.0)
+
+    # Cocina
+    house_out = STATE.setdefault("house_out", {})
+    wall("d_kcabinet", "kitchen", "S", -360.0)
+    wall("d_trash", "kitchen", "E", -560.0, yaw_extra=0.0)
+    wall("d_kbasket", "kitchen", "S", -640.0)
+    floor("d_broom", ROOMS["kitchen"]["x1"] - 40.0, ROOMS["kitchen"]["y1"] - 45.0)
+    ktable = house_out.get("kitchen_table")
+    if ktable:
+        on("d_teaset", ktable, dx=0.0, dy=0.0, long_axis="X")
+        on("d_bowl", ktable, dx=ktable.wx * 0.3, dy=-ktable.wy * 0.2)
+    kcab = house_out.get("kitchen_cabinet")
+    if kcab:
+        on("d_bottles", kcab, dx=0.0, dy=kcab.wy * 0.2, long_axis="Y")
+    on("d_pot", house_out.get("kitchen_stove"), dx=-8.0, dy=10.0, require_hit=True)
+
+    # Bano
+    br = ROOMS["bathroom"]
+    floor("d_plunger", br["x0"] + 32.0, br["y1"] - 70.0)
+    floor("d_bleach", br["x1"] - 20.0, br["y0"] + 42.0, yaw_extra=25.0)
+    floor("d_cleaner", br["x1"] - 36.0, br["y0"] + 30.0, yaw_extra=-40.0)
+    floor("d_stool", br["x1"] - 45.0, br["y1"] - 60.0)
+    on("d_duck", house_out.get("bathtub"), dx=25.0, dy=0.0, require_hit=True)
+
+    # Dormitorio
+    bd = ROOMS["bedroom"]
+    floor("d_rocking", bd["x1"] - 160.0, bd["y1"] - 75.0, face=-150.0)   # mirando hacia la cama
+    wall("d_suitcase", "bedroom", "W", -560.0)
+    bed = house_out.get("bed")
+    if bed:
+        floor("d_ottoman", bed.x, bed.max_y + 45.0, yaw_extra=0.0)
+    night = house_out.get("nightstand")
+    if night:
+        on("d_alarm", night, dx=0.0, dy=0.0, face_yaw=90.0)
+
+
+def spawn_dust(mats):
+    """Motas de polvo en suspension (se ven donde les da la luz: linterna, tele, ventana)."""
+    dust = actor_sub.spawn_actor_from_class(unreal.VGDustMotes, V(0, 0, 120), R())
+    dust.setup_dust(eal.load_asset("/Engine/BasicShapes/Cube"), mats["dust"], 380, V(260.0, 260.0, 130.0), 0.4)
+    mark(dust, "dust_motes", "Atmosphere")
+    return dust
 
 
 def prep_slot(out, key, **kw):
@@ -1175,24 +1313,7 @@ def build_scripted_events(out, door, info, lamp, tv):
         return trigger(key, room_box[0], room_box[1], auto_fire_after=seconds,
                        require_player_inside=True, fire_on_overlap=False)
 
-    # --- La figura: perchero con un vestido viejo, de pie en el pasillo, oculta hasta el evento ---
-    figure = []
-    stand_prep = prep_slot(out, "coat_stand")
-    if stand_prep:
-        fx, fy = door_cx + 15.0, hall_y - 10.0
-        stand = stand_prep.spawn(fx, fy, 0.0, folder="Events", movable=True)
-        figure.append(stand.actor)
-        dress_prep = prep_slot(out, "dress")
-        if dress_prep:
-            dress = dress_prep.spawn(fx, fy, max(stand.top - dress_prep.h - 12.0, 0.0), folder="Events", movable=True)
-            dress.actor.attach_to_actor(stand.actor, "", unreal.AttachmentRule.KEEP_WORLD, unreal.AttachmentRule.KEEP_WORLD,
-                                        unreal.AttachmentRule.KEEP_WORLD, False)
-            figure.append(dress.actor)
-        for actor in figure:
-            actor.set_actor_enable_collision(False)
-            actor.set_actor_hidden_in_game(True)
-            for comp in actor.get_components_by_class(unreal.StaticMeshComponent):
-                no_collision(comp)
+    entity = spawn_entity()
 
     # --- Zumbido de angustia (sube en los momentos clave) ---
     dread = actor_sub.spawn_actor_from_class(unreal.AmbientSound, V(0, 0, 150), R())
@@ -1214,18 +1335,17 @@ def build_scripted_events(out, door, info, lamp, tv):
     knock = 0.75 * steps + 2.2
     t.add_step(action("PlaySound"), None, knock, sfx("door_knock"), at(t, door_cx, -HY - T - 12.0, 120.0), False)
     t.add_step(action("FlashlightFail"), None, knock, None, unreal.Transform(location=V(6, 0, 0)), False)
-    for actor in figure:
-        t.add_step(action("ToggleVisibility"), actor, knock + 0.5, None, identity, False)
     t.add_step(action("AudioPlay"), dread, knock + 1.0, None, identity, False)
     t.add_step(action("PlaySound"), door, knock + 3.0, sfx("door_locked"), identity, False)
     t.add_step(action("DoorOpen"), door, knock + 5.5, None, identity, False)
-    # La figura desaparece en cuanto apartas la vista; la puerta se cierra cuando no la miras.
-    for actor in figure:
-        t.add_step(action("ToggleVisibility"), actor, knock + 8.0, None, identity, True)
-    t.add_step(action("DoorClose"), door, knock + 9.0, None, identity, True)
+    if entity:
+        # La puerta se entreabre sola... y hay alguien de pie en el pasillo, al otro lado.
+        t.add_step(action("EntityAppear"), entity, knock + 5.0, None, unreal.Transform(location=V(door_cx + 10.0, hall_y - 25.0, 0.0)), False)
+        t.add_step(action("EntityWatch"), entity, knock + 5.1, None, unreal.Transform(location=V(170.0, 7.0, 0.0)), False)
+    t.add_step(action("DoorClose"), door, knock + 13.0, None, identity, True)
     t.add_step(action("AudioStop"), dread, knock + 16.0, None, identity, False)
 
-    build_loop_events(out, door, lamp, tv, dread, figure)
+    build_story_events(out, door, lamp, tv, dread, entity)
 
     # --- El busto te sigue con la mirada (solo cuando no lo miras) ---
     bust = out.get("bust")
@@ -1501,7 +1621,8 @@ def build_house(res, mats, info, out):
             f0, f1 = r["x1"] - TW, r["x1"] + TW
         c0, c1 = c - DOOR_W * 0.5 - JAMB - 1.0, c + DOOR_W * 0.5 + JAMB + 1.0
         house_door_frame("frame_" + key, axis, c0, c1, f0, f1, mats)
-        locked = key in ("door_bathroom", "door_front")
+        # La del fondo es una puerta cerrada sin mas (antes era el bucle tipo P.T.).
+        locked = key in ("door_bathroom", "door_front", "door_end")
         # Todas abren hacia dentro de su estancia, nunca hacia el pasillo (ver signos en VGDoor).
         open_sign = {"door_front": 1.0}.get(key, -1.0)
         house["doors"][key] = spawn_house_door(key, axis, c - DOOR_W * 0.5, wall_c, res, mats, locked, open_sign)
@@ -1517,7 +1638,7 @@ def build_house(res, mats, info, out):
             g = group_for(bulb_res)
             lamp.setup_mesh(g.main, V(-g.center[0], g.center[1], g.min[2]), R(roll=180.0))
         set_bool(lamp, "directly_interactable", False)
-        lamp.setup_light(V(0, 0, -4.0), 65.0, 2500.0, 520.0)
+        lamp.setup_light(V(0, 0, -4.0), 22.0, 2300.0, 420.0)
         if i != 1:
             # Rendimiento: solo la bombilla central proyecta sombras (cada sombra cuesta en la GPU del M4).
             safe_set(lamp.get_editor_property("light"), "cast_shadows", False)
@@ -1531,7 +1652,7 @@ def build_house(res, mats, info, out):
         house["lamps"]["bulb_%d" % (i + 1)] = lamp
 
     # Fluorescentes de cocina (apagado) y bano (encendido, con parpadeo constante tras la puerta cerrada).
-    for name, room, on, lumens in (("fluo_kitchen", "kitchen", False, 900.0), ("fluo_bathroom", "bathroom", True, 520.0)):
+    for name, room, on, lumens in (("fluo_kitchen", "kitchen", False, 300.0), ("fluo_bathroom", "bathroom", True, 170.0)):
         r = ROOMS[room]
         cx, cy = (r["x0"] + r["x1"]) * 0.5, (r["y0"] + r["y1"]) * 0.5
         lamp = actor_sub.spawn_actor_from_class(unreal.VGLamp, V(cx, cy, H - 8.0), R())
@@ -1568,18 +1689,6 @@ def build_house(res, mats, info, out):
                     repeat_interval=6.5, fire_on_overlap=False, once=False)
         t.add_step(action("LampFlicker"), house["lamps"]["fluo_bathroom"], 0.0, None, unreal.Transform(scale=V(0.6, 1, 1)), False)
 
-    # Bucle: cruzar el vestibulo del fondo te devuelve a la entrada del pasillo.
-    v = ROOMS["vestibule"]
-    portal = actor_sub.spawn_actor_from_class(unreal.VGLoopPortal, V((v["x0"] + v["x1"]) * 0.5 + 10.0, CORR_YC, 100.0), R())
-    portal.set_box_extent(V(22.0, 55.0, 100.0))
-    dest = actor_sub.spawn_actor_from_class(unreal.TargetPoint, V(CORR_X0 + 120.0 + 10.0, CORR_YC, 100.0), R())
-    mark(dest, "loop_destination", "House/Loop")
-    portal.set_destination(dest)
-    portal.set_door_to_close(house["doors"]["door_end"])
-    safe_set(portal, "teleport_sound", sfx("door_close"))
-    mark(portal, "loop_portal", "House/Loop")
-    house["portal"] = portal
-
     # El pasillo pasa a ser el "hall" de los eventos existentes.
     info["hall"] = dict(x0=CORR_X0 + TW, x1=CORR_X1 - TW, y0=CORR_Y0 + TW, y1=CORR_Y1)
     return house
@@ -1601,13 +1710,17 @@ FACE = {"N": -90.0, "S": 90.0, "W": 0.0, "E": 180.0}   # yaw para mirar hacia el
 
 
 def furnish_house(res, house):
+    house_out = STATE.setdefault("house_out", {})
+
     def place(slot, key, room, side, along, folder="House/Furniture", face=True, long_axis=None, yaw_extra=0.0):
         r = res.get(slot)
         if not r:
             return None
         p = Prep(key, r, face_yaw=FACE[side] if face and not long_axis else None, long_axis=long_axis, yaw_extra=yaw_extra)
         x, y = against(p, room, side, along)
-        return p.spawn(x, y, 0.0, folder=folder)
+        placed = p.spawn(x, y, 0.0, folder=folder)
+        house_out[key] = placed
+        return placed
 
     # Cocina: mueble y cocina electrica contra la pared oeste, mesa con dos sillas en el centro.
     k = ROOMS["kitchen"]
@@ -1618,6 +1731,7 @@ def furnish_house(res, house):
         tp = Prep("kitchen_table", table_res, long_axis="X")
         tx, ty = (k["x0"] + k["x1"]) * 0.5 + 40.0, (k["y0"] + k["y1"]) * 0.5 - 30.0
         table = tp.spawn(tx, ty, 0.0, folder="House/Furniture")
+        house_out["kitchen_table"] = table
         chair_res = res.get("kitchen_chair")
         if chair_res:
             for i, (dy, face) in enumerate(((-table.wy * 0.5 - 30.0, 90.0), (table.wy * 0.5 + 30.0, -90.0))):
@@ -1742,6 +1856,7 @@ def build():
         STATE["overrides"] = load_json("layout_overrides.json", {}) or {}
     STATE["unverified"], STATE["blockouts"], STATE["used"] = [], [], {}
     DOOR_LEAF_W[0] = 0.0
+    STATE["house_out"] = {}
     del WARNINGS[:]
 
     with unreal.ScopedSlowTask(8, "Vigilia: construyendo el salon") as task:
@@ -1770,7 +1885,11 @@ def build():
         out = furnish(res, mats, info, photos)
         task.enter_progress_frame(1, "Iluminacion, audio y eventos")
         build_lighting(info)
+        STATE["mats"] = mats
+        STATE["salon_door_x"] = info["door"]["x0"] + info["door"]["w"] * 0.5
+        dress_house(out)
         build_gameplay(out, door, info, mats)
+        spawn_dust(mats)
         task.enter_progress_frame(1, "Guardando")
         level_sub.save_current_level()
         eal.save_directory(ROOT, True, True)

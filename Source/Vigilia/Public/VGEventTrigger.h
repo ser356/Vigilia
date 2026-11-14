@@ -42,7 +42,14 @@ enum class EVGEventAction : uint8
 	/** Cambia el color de una lampara: Offset.Scale = RGB. */
 	LampColor,
 	/** Muestra Message en pantalla. Offset.X = duracion (por defecto 4 s). */
-	ShowMessage
+	ShowMessage,
+	/** La entidad (Target) aparece en Offset.Location (coordenadas de mundo, Z = suelo). */
+	EntityAppear,
+	/** La entidad se queda mirando. Offset.X = distancia a la que se esfuma, Offset.Y = segundos maximos. */
+	EntityWatch,
+	/** La entidad persigue al jugador. Offset.X = velocidad (cm/s), Offset.Y = segundos maximos. */
+	EntityChase,
+	EntityVanish
 };
 
 USTRUCT(BlueprintType)
