@@ -5,6 +5,9 @@
 #include "VGEntity.generated.h"
 
 class UStaticMeshComponent;
+class USkeletalMeshComponent;
+class USkeletalMesh;
+class UAnimationAsset;
 class UAudioComponent;
 class UMaterialInterface;
 class USoundBase;
@@ -15,7 +18,8 @@ enum class EVGEntityState : uint8
 {
 	Hidden,
 	Watching,
-	Chasing
+	Chasing,
+	Running
 };
 
 /**
@@ -36,6 +40,17 @@ public:
 	/** Malla y material de silueta. MeshYawOffset: giro para que el frente de la malla mire al jugador. */
 	UFUNCTION(BlueprintCallable, Category = "Vigilia|Entity")
 	void SetupEntity(UStaticMesh* InMesh, UMaterialInterface* SilhouetteMaterial, FVector RelativeLocation, float InMeshYawOffset, float UniformScale);
+
+	/** Cuerpo humanoide animado. Las animaciones pueden ser nulas (Run cae a Walk acelerado, etc.). */
+	UFUNCTION(BlueprintCallable, Category = "Vigilia|Entity")
+	void SetupSkeletal(USkeletalMesh* InMesh, UAnimationAsset* InIdle, UAnimationAsset* InWalk, UAnimationAsset* InRun, UMaterialInterface* SilhouetteMaterial, FVector RelativeLocation, float InMeshYawOffset, float UniformScale);
+
+	/** Aparece en From y corre en linea recta hasta To; al llegar se esfuma. */
+	UFUNCTION(BlueprintCallable, Category = "Vigilia|Entity")
+	void RunTo(FVector From, FVector To, float Speed);
+
+	UFUNCTION(BlueprintCallable, Category = "Vigilia|Entity")
+	void AddStepSound(USoundBase* Sound);
 
 	/** Aparece de pie en Location (Z = suelo), mirando al jugador. */
 	UFUNCTION(BlueprintCallable, Category = "Vigilia|Entity")
@@ -63,7 +78,29 @@ public:
 	TObjectPtr<UStaticMeshComponent> Mesh;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vigilia")
+	TObjectPtr<USkeletalMeshComponent> Body;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vigilia")
 	TObjectPtr<UAudioComponent> Audio;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Entity")
+	TObjectPtr<UAnimationAsset> IdleAnim;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Entity")
+	TObjectPtr<UAnimationAsset> WalkAnim;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Entity")
+	TObjectPtr<UAnimationAsset> RunAnim;
+
+	/** Velocidad (cm/s) a la que la animacion de andar/correr se ve natural a ritmo 1. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Entity")
+	float WalkAnimSpeed = 110.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Entity")
+	float RunAnimSpeed = 420.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Audio")
+	TArray<TObjectPtr<USoundBase>> StepSounds;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Entity")
 	float MeshYawOffset = 0.f;
@@ -91,6 +128,15 @@ public:
 
 private:
 	void FacePlayer();
+	void FaceDirection(const FVector& Direction);
+	void PlayAnim(UAnimationAsset* Anim, float Rate);
+	void PlayMoveAnim(float Speed);
+	void Footsteps(float MovedDistance);
+	bool HasBody() const;
+
+	FVector RunTarget = FVector::ZeroVector;
+	float RunSpeed = 0.f;
+	float StepAccumulator = 0.f;
 	void FlickerLamps(float Duration);
 	APawn* GetPlayer() const;
 

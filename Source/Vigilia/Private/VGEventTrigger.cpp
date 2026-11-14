@@ -51,6 +51,18 @@ void AVGEventTrigger::HandleLoop(int32 LoopCount)
 	}
 }
 
+void AVGEventTrigger::AddEntityRunStep(float Delay, AActor* Entity, FVector From, FVector To, float Speed)
+{
+	Modify();
+	FVGEventStep& Step = Steps.AddDefaulted_GetRef();
+	Step.Action = EVGEventAction::EntityRunTo;
+	Step.Target = Entity;
+	Step.Delay = Delay;
+	Step.Offset = FTransform(From);
+	Step.Location2 = To;
+	Step.Value = Speed;
+}
+
 void AVGEventTrigger::AddMessageStep(float Delay, const FText& Text, float Duration)
 {
 	Modify();
@@ -336,6 +348,12 @@ void AVGEventTrigger::ExecuteStep(int32 Index)
 		{
 			const float Duration = Step.Offset.GetLocation().X > 0.1 ? static_cast<float>(Step.Offset.GetLocation().X) : 4.f;
 			Loop->ShowMessage(Step.Message, Duration);
+		}
+		break;
+	case EVGEventAction::EntityRunTo:
+		if (AVGEntity* Runner = Cast<AVGEntity>(Target))
+		{
+			Runner->RunTo(Step.Offset.GetLocation(), Step.Location2, Step.Value);
 		}
 		break;
 	case EVGEventAction::EntityAppear:

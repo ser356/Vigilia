@@ -1077,28 +1077,126 @@ def at(trigger_actor, x, y, z):
     return unreal.Transform(location=V(x - c.x, y - c.y, z - c.z))
 
 
-def spawn_entity():
-    """La presencia: una figura humana mostrada como silueta casi negra. Oculta hasta que un evento la llama."""
-    r = STATE.get("res", {}).get("entity")
-    mats = STATE.get("mats", {})
-    if not r or "paint" not in mats:
-        warn("Sin modelo para la entidad: no habra apariciones. Ejecuta Tools/fetch_polyhaven.py")
+CHARACTER_HINTS = ("zombie", "nurse", "ghost", "woman", "female", "girl", "horror", "monster")
+MANNEQUIN_HINTS = ("mannequin", "manny", "quinn")
+
+
+def find_character():
+    """Busca en el proyecto un personaje con esqueleto y sus animaciones (idle / andar / correr).
+    Vale cualquiera anadido desde Fab (p. ej. 'Zombie Female: Nurse') o el maniqui de la plantilla
+    Third Person de Unreal. Devuelve un dict o None."""
+    from vg_common import class_name, registry
+    try:
+        registry.scan_paths_synchronous(["/Game"], True)
+        datas = list(registry.get_assets_by_path("/Game", recursive=True))
+    except Exception as exc:  # noqa: BLE001
+        warn("No se pudo explorar el proyecto en busca de personajes: %s" % exc)
         return None
-    g = group_for(r)
-    STATE["used"]["entity"] = r
-    height = max(g.size[2], 1.0)
-    scale = 1.0 if 150.0 <= height <= 200.0 else 175.0 / height
-    front, _ = front_direction(r, g, STATE["metrics"])
+    meshes = [d for d in datas if class_name(d) == "SkeletalMesh" and not str(d.package_path).startswith(ROOT)]
+    if not meshes:
+        return None
+
+    def score(d):
+        name = (str(d.package_path) + "/" + str(d.asset_name)).lower()
+        if any(h in name for h in CHARACTER_HINTS):
+            return 0
+        if any(h in name for h in MANNEQUIN_HINTS):
+            return 1
+        return 2
+
+    best = sorted(meshes, key=lambda d: (score(d), str(d.asset_name)))[0]
+    mesh = best.get_asset()
+    skeleton = None
+    try:
+        skeleton = mesh.get_editor_property("skeleton")
+    except Exception as exc:  # noqa: BLE001
+        warn("Esqueleto de %s: %s" % (best.asset_name, exc))
+    skel_name = str(skeleton.get_name()) if skeleton else ""
+    top = "/".join(str(best.package_path).split("/")[:4])
+
+    anims = [d for d in datas if class_name(d) == "AnimSequence"]
+    compatible = []
+    for d in anims:
+        tag = ""
+        try:
+            tag = str(d.get_tag_value("Skeleton") or "")
+        except Exception:  # noqa: BLE001
+            tag = ""
+        if skel_name and (("." + skel_name + "'") in tag or tag.endswith("." + skel_name)):
+            compatible.append(d)
+    if not compatible:
+        compatible = [d for d in anims if str(d.package_path).startswith(top)]
+
+    def pick(words, avoid=()):
+        found = [d for d in compatible if any(w in str(d.asset_name).lower() for w in words)
+                 and not any(w in str(d.asset_name).lower() for w in avoid)]
+        # Prefiere las que avanzan de frente y los nombres mas cortos (las variantes llevan sufijos).
+        found.sort(key=lambda d: (0 if any(w in str(d.asset_name).lower() for w in ("fwd", "forward")) else 1,
+                                  len(str(d.asset_name))))
+        return found[0].get_asset() if found else None
+
+    sideways = ("back", "left", "right", "strafe", "turn", "start", "stop", "pivot", "lean", "crouch", "attack")
+    info = {
+        "mesh": mesh,
+        "name": str(best.asset_name),
+        "idle": pick(("idle",), ("turn", "break", "crouch")),
+        "walk": pick(("walk",), sideways),
+        "run": pick(("run", "jog", "sprint"), sideways),
+        "silhouette": score(best) != 0,
+    }
+    log("Personaje para las entidades: %s (idle=%s, andar=%s, correr=%s)" % (
+        info["name"], bool(info["idle"]), bool(info["walk"]), bool(info["run"])))
+    return info
+
+
+def spawn_entity(key="entity"):
+    """Una presencia. Si hay un personaje con esqueleto en el proyecto, es un cuerpo humano animado;
+    si no, una estatua en silueta negra (respaldo). Oculta hasta que un evento la llama."""
+    mats = STATE.get("mats", {})
+    if "paint" not in mats:
+        return None
     silhouette = vm.instance("MI_Paint_Entity", mats["paint"], None, {"Roughness": 0.7, "Metallic": 0.0},
                              {"Color": (0.003, 0.003, 0.004, 1)})
+    if "character" not in STATE:
+        STATE["character"] = find_character()
+    character = STATE["character"]
     actor = actor_sub.spawn_actor_from_class(unreal.VGEntity, V(0.0, 0.0, -1500.0), R())
-    actor.setup_entity(g.main, silhouette, V(-g.center[0] * scale, -g.center[1] * scale, -g.min[2] * scale),
-                       -yaw_of(front), scale)
+    if character:
+        mesh = character["mesh"]
+        scale = 1.0
+        try:
+            height = mesh.get_bounds().box_extent.z * 2.0
+            if height > 1.0 and not 140.0 <= height <= 215.0:
+                scale = 175.0 / height
+        except Exception as exc:  # noqa: BLE001
+            warn("Altura del personaje: %s" % exc)
+        # Los personajes de Unreal miran hacia +Y y tienen el origen en los pies.
+        actor.setup_skeletal(mesh, character["idle"], character["walk"], character["run"],
+                             silhouette if character["silhouette"] else None, V(0, 0, 0), -90.0, scale)
+    else:
+        r = STATE.get("res", {}).get("entity")
+        if not r:
+            warn("Sin modelo para la entidad: no habra apariciones. Ejecuta Tools/fetch_polyhaven.py")
+            actor_sub.destroy_actor(actor)
+            return None
+        if "entity_warned" not in STATE:
+            STATE["entity_warned"] = True
+            warn("No hay ningun personaje con esqueleto en el proyecto: las entidades seran una estatua en "
+                 "silueta, sin animacion. Anade 'Zombie Female: Nurse' desde Fab (ver ASSETS.md).")
+        g = group_for(r)
+        STATE["used"]["entity"] = r
+        height = max(g.size[2], 1.0)
+        scale = 1.0 if 150.0 <= height <= 200.0 else 175.0 / height
+        front, _ = front_direction(r, g, STATE["metrics"])
+        actor.setup_entity(g.main, silhouette, V(-g.center[0] * scale, -g.center[1] * scale, -g.min[2] * scale),
+                           -yaw_of(front), scale)
     safe_set(actor, "chase_loop_sound", sfx("tv_static_loop"))
     safe_set(actor, "catch_sound", sfx("door_slam"))
+    for name in ("footstep_wood_01", "footstep_wood_02", "footstep_wood_03"):
+        actor.add_step_sound(sfx(name))
     for lamp in (STATE.get("house") or {}).get("lamps", {}).values():
         actor.add_linked_lamp(lamp)
-    mark(actor, "entity", "Events")
+    mark(actor, key, "Events")
     return actor
 
 
@@ -1173,10 +1271,12 @@ def build_story_events(out, door, lamp, tv, dread, entity):
         t.add_step(action("LampOn"), bulb, 5.0, None, identity, False)
     t.add_step(action("FlashlightFail"), None, 2.0, None, unreal.Transform(location=V(4.0, 0, 0)), False)
     t.add_step(action("AudioPlay"), dread, 2.5, None, identity, False)
-    if entity:
-        t.add_step(action("EntityAppear"), entity, 5.2, None, loc(560.0, CORR_YC), False)
-        t.add_step(action("EntityWatch"), entity, 5.3, None, params(0.0, 4.0), False)
-        t.add_step(action("EntityChase"), entity, 7.5, None, params(300.0, 11.0), False)
+    chaser = STATE.get("entities", {}).get("chaser") or entity
+    if chaser:
+        # Aparece al fondo, se queda quieta dos segundos... y echa a correr hacia ti.
+        t.add_step(action("EntityAppear"), chaser, 5.2, None, loc(560.0, CORR_YC), False)
+        t.add_step(action("EntityWatch"), chaser, 5.3, None, params(0.0, 6.0), False)
+        t.add_step(action("EntityChase"), chaser, 7.5, None, params(330.0, 12.0), False)
     t.add_step(action("AudioStop"), dread, 21.0, None, identity, False)
     for bulb in bulbs:
         t.add_step(action("LampOff"), bulb, 20.0, None, identity, False)
@@ -1186,6 +1286,21 @@ def build_story_events(out, door, lamp, tv, dread, entity):
     if bulbs:
         t.add_step(action("LampColor"), bulbs[0], 22.0, None, unreal.Transform(scale=V(1.0, 0.85, 0.6)), False)
         t.add_step(action("LampOn"), bulbs[0], 23.0, None, identity, False)
+
+    # --- Carreras: alguien pasa corriendo ---
+    runner = STATE.get("entities", {}).get("runner")
+    if runner:
+        # 1) Estando en el salon cerca de la puerta: pasa corriendo por el pasillo, por delante del hueco.
+        t = trigger("story_run_door", (d_x - 30.0, -HY + 120.0, 100.0), (80.0, 60.0, 100.0), min_game_time=50.0)
+        t.add_entity_run_step(0.4, runner, V(d_x + 430.0, CORR_YC, 0.0), V(d_x - 560.0, CORR_YC, 0.0), 560.0)
+        # 2) Avanzando por el pasillo hacia la cocina: al fondo, alguien cruza corriendo y se mete en ella.
+        kx = HOUSE_DOORS["door_kitchen"][2]
+        t = trigger("story_run_far", (-120.0, CORR_YC, 100.0), (45.0, 45.0, 100.0))
+        t.add_entity_run_step(0.2, runner, V(CORR_X0 + 40.0, CORR_YC + 15.0, 0.0), V(kx, CORR_Y0 + 20.0, 0.0), 450.0)
+        # 3) Dentro de la cocina: pasa por delante de la puerta de la cocina, por el pasillo.
+        k = ROOMS["kitchen"]
+        t = trigger("story_run_kitchen", ((k["x0"] + k["x1"]) * 0.5 + 40.0, k["y0"] + 110.0, 100.0), (150.0, 70.0, 100.0))
+        t.add_entity_run_step(1.0, runner, V(kx + 300.0, CORR_YC, 0.0), V(kx - 190.0, CORR_YC, 0.0), 520.0)
 
     # --- Salida: fin de la demo ---
     ex = ROOMS["exit"]
@@ -1313,7 +1428,11 @@ def build_scripted_events(out, door, info, lamp, tv):
         return trigger(key, room_box[0], room_box[1], auto_fire_after=seconds,
                        require_player_inside=True, fire_on_overlap=False)
 
-    entity = spawn_entity()
+    # Tres presencias independientes: la que observa, la que cruza corriendo y la que persigue.
+    entity = spawn_entity("entity_watcher")
+    runner = spawn_entity("entity_runner")
+    chaser = spawn_entity("entity_chaser")
+    STATE["entities"] = {"watcher": entity, "runner": runner, "chaser": chaser}
 
     # --- Zumbido de angustia (sube en los momentos clave) ---
     dread = actor_sub.spawn_actor_from_class(unreal.AmbientSound, V(0, 0, 150), R())
