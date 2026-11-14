@@ -126,7 +126,7 @@ def build(v, res, mats, photos):
             # Medianera unica por pareja; borde este cierra contra la caja de escalera.
             wall(name + "_east", "Y", y0 + 10, y1 - 10, x1 - 10, z)
             door = v.spawn_house_door("mansion_" + name + "_door", "X", cx - v.DOOR_W / 2, door_y, res, mats,
-                                      open_sign=-1 if side == "N" else 1)
+                                      open_sign=1 if side == "N" else -1)
             loc = door.get_actor_location()
             door.set_actor_location(v.V(loc.x, loc.y, loc.z + z), False, False)
             # Marcos construidos a cota cero y trasladados con sus componentes.
