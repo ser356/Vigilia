@@ -1,0 +1,2845 @@
+From 758d99d12586d3342b6bf77767593268acfa6b8d Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 14 Nov 2026 15:51:16 +0000
+Subject: [PATCH 1/2] Entidad que aparece y persigue, polvo en suspension, mas
+ decoracion, menos luz, sin bucle
+
+Sustos
+- AVGEntity: silueta oscura que aparece mirandote, se esfuma al acercarte o te persigue a
+  tirones; si te alcanza, fundido a negro. Las bombillas parpadean cuando aparece o se va
+- Acciones de evento EntityAppear / EntityWatch / EntityChase / EntityVanish
+- Eliminado el perchero con vestido
+
+Progresion por exploracion (sustituye al bucle tipo P.T.)
+- Pasillo: figura al fondo; dormitorio: en la puerta a tu espalda; cocina: el bano se
+  abre; bano: apagon, luz roja y persecucion; despues se abre la puerta de entrada
+- La puerta del fondo queda cerrada con llave; se retira el portal
+
+Atmosfera
+- AVGDustMotes: motas de polvo iluminadas por las luces de la escena (ISM en CPU)
+- Menos luz: bombillas 22 lm, tele 95 lm, lampara 45 lm, farola 320 lm, exposicion -1,2
+
+Decoracion
+- 25 modelos CC0 de Poly Haven (descarga automatica) repartidos por salon, pasillo, cocina,
+  bano y dormitorio, pegados a paredes o sobre muebles
+
+Co-Authored-By: Claude Fable 5.2 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01FSNh57Q72v7GgUik5hM21o
+---
+ ASSETS.md                                 |   3 +-
+ Scripts/asset_manifest.json               | 433 ++++++++++++++--
+ Scripts/polyhaven_metrics.json            | 582 ++++++++++++++++++++++
+ Scripts/vg_materials.py                   |  13 +
+ Scripts/vg_room.py                        | 323 ++++++++----
+ Source/Vigilia/Private/VGDustMotes.cpp    |  93 ++++
+ Source/Vigilia/Private/VGEntity.cpp       | 223 +++++++++
+ Source/Vigilia/Private/VGEventTrigger.cpp |  26 +
+ Source/Vigilia/Public/VGDustMotes.h       |  56 +++
+ Source/Vigilia/Public/VGEntity.h          | 103 ++++
+ Source/Vigilia/Public/VGEventTrigger.h    |   9 +-
+ 11 files changed, 1725 insertions(+), 139 deletions(-)
+ create mode 100644 Source/Vigilia/Private/VGDustMotes.cpp
+ create mode 100644 Source/Vigilia/Private/VGEntity.cpp
+ create mode 100644 Source/Vigilia/Public/VGDustMotes.h
+ create mode 100644 Source/Vigilia/Public/VGEntity.h
+
+diff --git a/ASSETS.md b/ASSETS.md
+index a996b74..2bf7599 100644
+--- a/ASSETS.md
++++ b/ASSETS.md
+@@ -12,8 +12,6 @@ Para cada uno: **Add to My Library** en fab.com y despues **Add to Project** des
+ | **Imprescindible** | floor_lamp | [Wooden Floor Lamp](https://www.fab.com/listings/a8534003-b8e6-4eea-bf9e-9eecd9fedc47) | Quixel Megascans |
+ | **Imprescindible** | door | [Urban Miscellaneous Door Interior Mixed Modern 02](https://www.fab.com/listings/297f9432-c01d-4154-8c1a-8d23d3d3f0c3) | Quixel Megascans |
+ | **Imprescindible** | window | [Urban Miscellaneous Window Interior Mixed Weathered 03](https://www.fab.com/listings/26a02cd8-fa99-4d25-bde1-5d22e4b3a0bc) | Quixel Megascans |
+-| **Imprescindible** | coat_stand | [Wooden Standing Coat Hanger](https://www.fab.com/listings/b8252c32-a7bb-4d0c-a480-181a6648f915) | Quixel Megascans |
+-| **Imprescindible** | dress | [Urban Shanty Town Dress Fabric Worn](https://www.fab.com/listings/51bb3f4a-40b4-4bdd-b87a-f8e47a7bfc5d) | Quixel Megascans |
+ | **Imprescindible** | bust | [Female Bust Statuette](https://www.fab.com/listings/e47ee8d9-8b33-4a2d-b591-dd0c187ca5bc) | Quixel Megascans |
+ | **Imprescindible** | bed | [Residential European Rural Furniture Bed Wood Single](https://www.fab.com/listings/89b48726-c79c-460a-8aa1-5bbd2eaa7fbd) | Quixel Megascans |
+ | **Imprescindible** | kitchen_cabinet | [Urban Miscellaneous Cabinet Kitchen Wood Worn](https://www.fab.com/listings/ca1b70b5-3002-4326-887f-b45f8df2553c) | Quixel Megascans |
+@@ -46,6 +44,7 @@ Para cada uno: **Add to My Library** en fab.com y despues **Add to Project** des
+ |  | towel | [Urban Trash Towel Dirty Fabric Old](https://www.fab.com/listings/e9f9bbd2-588b-403d-80be-e5deadf33ac4) | Quixel Megascans |
+ |  | rug | [Old Carpet](https://www.fab.com/listings/f6a088c6-6325-41fe-804f-86c572834b7a) | Quixel Megascans |
+ |  | curtain_fabric | [Furniture Fabric](https://www.fab.com/listings/83ff7c89-d525-4fae-bd8c-4f18dac106a8) | Quixel Megascans |
++| Opcional | entity | [Madre Statue MEDPOLY](https://www.fab.com/listings/32cab428-889e-49e9-8c89-2ea78696aca2) | sixonetwo (CC-BY: citar al autor en los creditos) |
+ 
+ Mientras falte alguno, el script usa un respaldo CC0 de Poly Haven si existe (ejecuta `python3 Tools/fetch_polyhaven.py`).
+ El contenido de Fab no se versiona en git (`Content/Fab/` esta en `.gitignore`).
+diff --git a/Scripts/asset_manifest.json b/Scripts/asset_manifest.json
+index 9397046..42c87a1 100644
+--- a/Scripts/asset_manifest.json
++++ b/Scripts/asset_manifest.json
+@@ -583,40 +583,6 @@
+    "max_tex": 1024,
+    "size_cm": 23
+   },
+-  "coat_stand": {
+-   "category": "Decor",
+-   "sources": [
+-    {
+-     "type": "fab",
+-     "title": "Wooden Standing Coat Hanger",
+-     "seller": "Quixel Megascans",
+-     "url": "https://www.fab.com/listings/b8252c32-a7bb-4d0c-a480-181a6648f915",
+-     "license": "Fab Standard License",
+-     "price_usd": 0.0,
+-     "kind": "3d-model"
+-    }
+-   ],
+-   "collision": "none",
+-   "max_tex": 1024,
+-   "size_cm": 180
+-  },
+-  "dress": {
+-   "category": "Decor",
+-   "sources": [
+-    {
+-     "type": "fab",
+-     "title": "Urban Shanty Town Dress Fabric Worn",
+-     "seller": "Quixel Megascans",
+-     "url": "https://www.fab.com/listings/51bb3f4a-40b4-4bdd-b87a-f8e47a7bfc5d",
+-     "license": "Fab Standard License",
+-     "price_usd": 0.0,
+-     "kind": "3d-model"
+-    }
+-   ],
+-   "collision": "none",
+-   "max_tex": 1024,
+-   "size_cm": 110
+-  },
+   "bust": {
+    "category": "Decor",
+    "sources": [
+@@ -868,6 +834,405 @@
+    "collision": "none",
+    "max_tex": 512,
+    "size_cm": 11
++  },
++  "entity": {
++   "category": "Entity",
++   "sources": [
++    {
++     "type": "fab",
++     "title": "Madre Statue MEDPOLY",
++     "seller": "sixonetwo",
++     "url": "https://www.fab.com/listings/32cab428-889e-49e9-8c89-2ea78696aca2",
++     "license": "CC-BY",
++     "price_usd": 0.0,
++     "kind": "3d-model"
++    },
++    {
++     "type": "polyhaven",
++     "id": "gothic_statue",
++     "res": "1k",
++     "url": "https://polyhaven.com/a/gothic_statue",
++     "license": "CC0"
++    }
++   ],
++   "collision": "none",
++   "max_tex": 512,
++   "size_cm": 175
++  },
++  "d_pillows": {
++   "category": "Decor/Dressing",
++   "sources": [
++    {
++     "type": "polyhaven",
++     "id": "throw_pillows_01",
++     "res": "1k",
++     "url": "https://polyhaven.com/a/throw_pillows_01",
++     "license": "CC0"
++    }
++   ],
++   "collision": "none",
++   "max_tex": 1024,
++   "size_cm": 94
++  },
++  "d_basket": {
++   "category": "Decor/Dressing",
++   "sources": [
++    {
++     "type": "polyhaven",
++     "id": "wicker_basket_01",
++     "res": "1k",
++     "url": "https://polyhaven.com/a/wicker_basket_01",
++     "license": "CC0"
++    }
++   ],
++   "collision": "box",
++   "max_tex": 1024,
++   "size_cm": 38
++  },
++  "d_cigs": {
++   "category": "Decor/Dressing",
++   "sources": [
++    {
++     "type": "polyhaven",
++     "id": "cigarette_pack",
++     "res": "1k",
++     "url": "https://polyhaven.com/a/cigarette_pack",
++     "license": "CC0"
++    }
++   ],
++   "collision": "none",
++   "max_tex": 1024,
++   "size_cm": 10
++  },
++  "d_lighter": {
++   "category": "Decor/Dressing",
++   "sources": [
++    {
++     "type": "polyhaven",
++     "id": "vintage_lighter",
++     "res": "1k",
++     "url": "https://polyhaven.com/a/vintage_lighter",
++     "license": "CC0"
++    }
++   ],
++   "collision": "none",
++   "max_tex": 1024,
++   "size_cm": 8
++  },
++  "d_glasses": {
++   "category": "Decor/Dressing",
++   "sources": [
++    {
++     "type": "polyhaven",
++     "id": "round_spectacles",
++     "res": "1k",
++     "url": "https://polyhaven.com/a/round_spectacles",
++     "license": "CC0"
++    }
++   ],
++   "collision": "none",
++   "max_tex": 1024,
++   "size_cm": 16
++  },
++  "d_wallclock": {
++   "category": "Decor/Dressing",
++   "sources": [
++    {
++     "type": "polyhaven",
++     "id": "wall_clock",
++     "res": "1k",
++     "url": "https://polyhaven.com/a/wall_clock",
++     "license": "CC0"
++    }
++   ],
++   "collision": "none",
++   "max_tex": 1024,
++   "size_cm": 32
++  },
++  "d_hallframe": {
++   "category": "Decor/Dressing",
++   "sources": [
++    {
++     "type": "polyhaven",
++     "id": "fancy_picture_frame_02",
++     "res": "1k",
++     "url": "https://polyhaven.com/a/fancy_picture_frame_02",
++     "license": "CC0"
++    }
++   ],
++   "collision": "none",
++   "max_tex": 1024,
++   "size_cm": 77
++  },
++  "d_hallframe2": {
++   "category": "Decor/Dressing",
++   "sources": [
++    {
++     "type": "polyhaven",
++     "id": "hanging_picture_frame_01",
++     "res": "1k",
++     "url": "https://polyhaven.com/a/hanging_picture_frame_01",
++     "license": "CC0"
++    }
++   ],
++   "collision": "none",
++   "max_tex": 1024,
++   "size_cm": 84
++  },
++  "d_kcabinet": {
++   "category": "Decor/Dressing",
++   "sources": [
++    {
++     "type": "polyhaven",
++     "id": "painted_wooden_cabinet",
++     "res": "1k",
++     "url": "https://polyhaven.com/a/painted_wooden_cabinet",
++     "license": "CC0"
++    }
++   ],
++   "collision": "box",
++   "max_tex": 1024,
++   "size_cm": 120
++  },
++  "d_trash": {
++   "category": "Decor/Dressing",
++   "sources": [
++    {
++     "type": "polyhaven",
++     "id": "metal_trash_can",
++     "res": "1k",
++     "url": "https://polyhaven.com/a/metal_trash_can",
++     "license": "CC0"
++    }
++   ],
++   "collision": "box",
++   "max_tex": 1024,
++   "size_cm": 178
++  },
++  "d_teaset": {
++   "category": "Decor/Dressing",
++   "sources": [
++    {
++     "type": "polyhaven",
++     "id": "tea_set_01",
++     "res": "1k",
++     "url": "https://polyhaven.com/a/tea_set_01",
++     "license": "CC0"
++    }
++   ],
++   "collision": "none",
++   "max_tex": 1024,
++   "size_cm": 92
++  },
++  "d_bowl": {
++   "category": "Decor/Dressing",
++   "sources": [
++    {
++     "type": "polyhaven",
++     "id": "wooden_bowl_01",
++     "res": "1k",
++     "url": "https://polyhaven.com/a/wooden_bowl_01",
++     "license": "CC0"
++    }
++   ],
++   "collision": "none",
++   "max_tex": 1024,
++   "size_cm": 31
++  },
++  "d_bottles": {
++   "category": "Decor/Dressing",
++   "sources": [
++    {
++     "type": "polyhaven",
++     "id": "wine_bottles_01",
++     "res": "1k",
++     "url": "https://polyhaven.com/a/wine_bottles_01",
++     "license": "CC0"
++    }
++   ],
++   "collision": "none",
++   "max_tex": 1024,
++   "size_cm": 68
++  },
++  "d_pot": {
++   "category": "Decor/Dressing",
++   "sources": [
++    {
++     "type": "polyhaven",
++     "id": "pot_enamel_01",
++     "res": "1k",
++     "url": "https://polyhaven.com/a/pot_enamel_01",
++     "license": "CC0"
++    }
++   ],
++   "collision": "none",
++   "max_tex": 1024,
++   "size_cm": 26
++  },
++  "d_kbasket": {
++   "category": "Decor/Dressing",
++   "sources": [
++    {
++     "type": "polyhaven",
++     "id": "wicker_basket_02",
++     "res": "1k",
++     "url": "https://polyhaven.com/a/wicker_basket_02",
++     "license": "CC0"
++    }
++   ],
++   "collision": "box",
++   "max_tex": 1024,
++   "size_cm": 35
++  },
++  "d_broom": {
++   "category": "Decor/Dressing",
++   "sources": [
++    {
++     "type": "polyhaven",
++     "id": "wooden_bucket_01",
++     "res": "1k",
++     "url": "https://polyhaven.com/a/wooden_bucket_01",
++     "license": "CC0"
++    }
++   ],
++   "collision": "box",
++   "max_tex": 1024,
++   "size_cm": 55
++  },
++  "d_plunger": {
++   "category": "Decor/Dressing",
++   "sources": [
++    {
++     "type": "polyhaven",
++     "id": "plunger",
++     "res": "1k",
++     "url": "https://polyhaven.com/a/plunger",
++     "license": "CC0"
++    }
++   ],
++   "collision": "none",
++   "max_tex": 1024,
++   "size_cm": 42
++  },
++  "d_bleach": {
++   "category": "Decor/Dressing",
++   "sources": [
++    {
++     "type": "polyhaven",
++     "id": "bleach_bottle",
++     "res": "1k",
++     "url": "https://polyhaven.com/a/bleach_bottle",
++     "license": "CC0"
++    }
++   ],
++   "collision": "none",
++   "max_tex": 1024,
++   "size_cm": 29
++  },
++  "d_cleaner": {
++   "category": "Decor/Dressing",
++   "sources": [
++    {
++     "type": "polyhaven",
++     "id": "all_purpose_cleaner",
++     "res": "1k",
++     "url": "https://polyhaven.com/a/all_purpose_cleaner",
++     "license": "CC0"
++    }
++   ],
++   "collision": "none",
++   "max_tex": 1024,
++   "size_cm": 32
++  },
++  "d_stool": {
++   "category": "Decor/Dressing",
++   "sources": [
++    {
++     "type": "polyhaven",
++     "id": "metal_stool_01",
++     "res": "1k",
++     "url": "https://polyhaven.com/a/metal_stool_01",
++     "license": "CC0"
++    }
++   ],
++   "collision": "box",
++   "max_tex": 1024,
++   "size_cm": 88
++  },
++  "d_duck": {
++   "category": "Decor/Dressing",
++   "sources": [
++    {
++     "type": "polyhaven",
++     "id": "rubber_duck_toy",
++     "res": "1k",
++     "url": "https://polyhaven.com/a/rubber_duck_toy",
++     "license": "CC0"
++    }
++   ],
++   "collision": "none",
++   "max_tex": 1024,
++   "size_cm": 30
++  },
++  "d_rocking": {
++   "category": "Decor/Dressing",
++   "sources": [
++    {
++     "type": "polyhaven",
++     "id": "Rockingchair_01",
++     "res": "1k",
++     "url": "https://polyhaven.com/a/Rockingchair_01",
++     "license": "CC0"
++    }
++   ],
++   "collision": "box",
++   "max_tex": 1024,
++   "size_cm": 100
++  },
++  "d_suitcase": {
++   "category": "Decor/Dressing",
++   "sources": [
++    {
++     "type": "polyhaven",
++     "id": "vintage_suitcase",
++     "res": "1k",
++     "url": "https://polyhaven.com/a/vintage_suitcase",
++     "license": "CC0"
++    }
++   ],
++   "collision": "box",
++   "max_tex": 1024,
++   "size_cm": 161
++  },
++  "d_ottoman": {
++   "category": "Decor/Dressing",
++   "sources": [
++    {
++     "type": "polyhaven",
++     "id": "Ottoman_01",
++     "res": "1k",
++     "url": "https://polyhaven.com/a/Ottoman_01",
++     "license": "CC0"
++    }
++   ],
++   "collision": "box",
++   "max_tex": 1024,
++   "size_cm": 88
++  },
++  "d_alarm": {
++   "category": "Decor/Dressing",
++   "sources": [
++    {
++     "type": "polyhaven",
++     "id": "alarm_clock_01",
++     "res": "1k",
++     "url": "https://polyhaven.com/a/alarm_clock_01",
++     "license": "CC0"
++    }
++   ],
++   "collision": "none",
++   "max_tex": 1024,
++   "size_cm": 17
+   }
+  },
+  "surfaces": {
+diff --git a/Scripts/polyhaven_metrics.json b/Scripts/polyhaven_metrics.json
+index 8ecd4d1..f92c470 100644
+--- a/Scripts/polyhaven_metrics.json
++++ b/Scripts/polyhaven_metrics.json
+@@ -35,6 +35,24 @@
+   ],
+   "front": "+Z"
+  },
++ "ClassicNightstand_01": {
++  "width_cm": 56.8,
++  "depth_cm": 42.4,
++  "height_cm": 70.0,
++  "centroid_off": [
++   0.0015,
++   0.1773
++  ],
++  "top_off": [
++   0.0013,
++   0.1372
++  ],
++  "meshes": 1,
++  "materials": [
++   "ClassicNightstand_01"
++  ],
++  "front": "+Z"
++ },
+  "CoffeeTable_01": {
+   "width_cm": 154.0,
+   "depth_cm": 97.3,
+@@ -53,6 +71,42 @@
+   ],
+   "front": "+Z"
+  },
++ "Ottoman_01": {
++  "width_cm": 88.5,
++  "depth_cm": 62.1,
++  "height_cm": 62.4,
++  "centroid_off": [
++   -0.0036,
++   -0.0092
++  ],
++  "top_off": [
++   -0.0081,
++   -0.0333
++  ],
++  "meshes": 1,
++  "materials": [
++   "Ottoman_01"
++  ],
++  "front": "+Z"
++ },
++ "Rockingchair_01": {
++  "width_cm": 70.8,
++  "depth_cm": 83.3,
++  "height_cm": 99.5,
++  "centroid_off": [
++   0.0017,
++   0.0148
++  ],
++  "top_off": [
++   0.0019,
++   -0.2474
++  ],
++  "meshes": 1,
++  "materials": [
++   "Rockingchair_01"
++  ],
++  "front": "+Z"
++ },
+  "Television_01": {
+   "width_cm": 60.0,
+   "depth_cm": 47.1,
+@@ -96,6 +150,61 @@
+   ],
+   "front": "+Z"
+  },
++ "alarm_clock_01": {
++  "width_cm": 13.2,
++  "depth_cm": 6.7,
++  "height_cm": 17.4,
++  "centroid_off": [
++   -0.0006,
++   -0.0154
++  ],
++  "top_off": [
++   0.0009,
++   -0.0416
++  ],
++  "meshes": 4,
++  "materials": [
++   "alarm_clock_01",
++   "alarm_clock_01_Glass"
++  ],
++  "front": "+Z"
++ },
++ "all_purpose_cleaner": {
++  "width_cm": 15.7,
++  "depth_cm": 11.7,
++  "height_cm": 32.0,
++  "centroid_off": [
++   0.0508,
++   -0.0
++  ],
++  "top_off": [
++   -0.1767,
++   -0.0
++  ],
++  "meshes": 1,
++  "materials": [
++   "all_purpose_cleaner"
++  ],
++  "front": "+Z"
++ },
++ "bleach_bottle": {
++  "width_cm": 8.8,
++  "depth_cm": 6.1,
++  "height_cm": 29.4,
++  "centroid_off": [
++   -0.0204,
++   -0.0034
++  ],
++  "top_off": [
++   -0.0332,
++   -0.0046
++  ],
++  "meshes": 1,
++  "materials": [
++   "bleach_bottle"
++  ],
++  "front": "+Z"
++ },
+  "book_encyclopedia_set_01": {
+   "width_cm": 55.1,
+   "depth_cm": 16.3,
+@@ -172,6 +281,24 @@
+   ],
+   "front": "+Z"
+  },
++ "cigarette_pack": {
++  "width_cm": 5.6,
++  "depth_cm": 2.9,
++  "height_cm": 10.3,
++  "centroid_off": [
++   0.0033,
++   0.0588
++  ],
++  "top_off": [
++   0.0669,
++   -0.031
++  ],
++  "meshes": 4,
++  "materials": [
++   "cigarette_pack"
++  ],
++  "front": "+Z"
++ },
+  "desk_lamp_arm_01": {
+   "width_cm": 20.2,
+   "depth_cm": 61.4,
+@@ -229,6 +356,63 @@
+   ],
+   "front": "+Z"
+  },
++ "fancy_picture_frame_02": {
++  "width_cm": 66.1,
++  "depth_cm": 8.9,
++  "height_cm": 77.1,
++  "centroid_off": [
++   0.003,
++   0.007
++  ],
++  "top_off": [
++   0.0027,
++   0.0182
++  ],
++  "meshes": 2,
++  "materials": [
++   "fancy_picture_frame_02",
++   "fancy_picture_frame_02_canvas"
++  ],
++  "front": "+Z"
++ },
++ "gothic_statue": {
++  "width_cm": 147.7,
++  "depth_cm": 156.4,
++  "height_cm": 174.0,
++  "centroid_off": [
++   0.0197,
++   0.1949
++  ],
++  "top_off": [
++   0.0512,
++   0.2102
++  ],
++  "meshes": 1,
++  "materials": [
++   "gothic_statue"
++  ],
++  "front": "+Z"
++ },
++ "hanging_picture_frame_01": {
++  "width_cm": 59.4,
++  "depth_cm": 1.6,
++  "height_cm": 84.1,
++  "centroid_off": [
++   0.0,
++   -0.2284
++  ],
++  "top_off": [
++   -0.0254,
++   -0.1658
++  ],
++  "meshes": 1,
++  "materials": [
++   "hanging_picture_frame_01_glass",
++   "hanging_picture_frame_01_artwork",
++   "hanging_picture_frame_01"
++  ],
++  "front": "+Z"
++ },
+  "hanging_picture_frame_02": {
+   "width_cm": 75.2,
+   "depth_cm": 3.3,
+@@ -307,6 +491,44 @@
+   ],
+   "front": "+Z"
+  },
++ "metal_stool_01": {
++  "width_cm": 35.2,
++  "depth_cm": 35.5,
++  "height_cm": 88.3,
++  "centroid_off": [
++   0.0008,
++   -0.0013
++  ],
++  "top_off": [
++   0.0017,
++   -0.0027
++  ],
++  "meshes": 1,
++  "materials": [
++   "metal_stool_01"
++  ],
++  "front": "+Z"
++ },
++ "metal_trash_can": {
++  "width_cm": 177.8,
++  "depth_cm": 55.6,
++  "height_cm": 90.6,
++  "centroid_off": [
++   -0.0274,
++   0.0057
++  ],
++  "top_off": [
++   0.0274,
++   0.0079
++  ],
++  "meshes": 8,
++  "materials": [
++   "metal_trash_can",
++   "metal_trash_can_rust",
++   "metal_trash_can_rust"
++  ],
++  "front": "+Z"
++ },
+  "old_bed_frame": {
+   "width_cm": 90.5,
+   "depth_cm": 200.2,
+@@ -343,6 +565,78 @@
+   ],
+   "front": "+Z"
+  },
++ "painted_wooden_cabinet": {
++  "width_cm": 119.5,
++  "depth_cm": 61.7,
++  "height_cm": 118.2,
++  "centroid_off": [
++   -0.0007,
++   0.2596
++  ],
++  "top_off": [
++   0.0002,
++   0.2939
++  ],
++  "meshes": 5,
++  "materials": [
++   "painted_wooden_cabinet"
++  ],
++  "front": "+Z"
++ },
++ "painted_wooden_cabinet_02": {
++  "width_cm": 99.7,
++  "depth_cm": 72.2,
++  "height_cm": 256.9,
++  "centroid_off": [
++   0.0144,
++   0.2668
++  ],
++  "top_off": [
++   0.0001,
++   -0.1895
++  ],
++  "meshes": 3,
++  "materials": [
++   "painted_wooden_cabinet_02"
++  ],
++  "front": "+Z"
++ },
++ "plunger": {
++  "width_cm": 17.2,
++  "depth_cm": 17.2,
++  "height_cm": 42.1,
++  "centroid_off": [
++   -0.0045,
++   0.0059
++  ],
++  "top_off": [
++   -0.0457,
++   0.0588
++  ],
++  "meshes": 1,
++  "materials": [
++   "plunger"
++  ],
++  "front": "+Z"
++ },
++ "pot_enamel_01": {
++  "width_cm": 26.3,
++  "depth_cm": 18.0,
++  "height_cm": 17.8,
++  "centroid_off": [
++   0.0,
++   0.0001
++  ],
++  "top_off": [
++   0.0,
++   -0.0
++  ],
++  "meshes": 2,
++  "materials": [
++   "pot_enamel_01"
++  ],
++  "front": "+Z"
++ },
+  "potted_plant_02": {
+   "width_cm": 70.1,
+   "depth_cm": 65.7,
+@@ -362,6 +656,43 @@
+   ],
+   "front": "+Z"
+  },
++ "round_spectacles": {
++  "width_cm": 15.8,
++  "depth_cm": 14.9,
++  "height_cm": 4.6,
++  "centroid_off": [
++   0.0001,
++   0.3808
++  ],
++  "top_off": [
++   -0.0,
++   0.3826
++  ],
++  "meshes": 1,
++  "materials": [
++   "round_spectacles",
++   "round_spectacles_glass"
++  ],
++  "front": "+Z"
++ },
++ "rubber_duck_toy": {
++  "width_cm": 21.4,
++  "depth_cm": 30.0,
++  "height_cm": 28.6,
++  "centroid_off": [
++   -0.0,
++   0.1187
++  ],
++  "top_off": [
++   -0.0,
++   0.1001
++  ],
++  "meshes": 1,
++  "materials": [
++   "rubber_duck_toy"
++  ],
++  "front": "+Z"
++ },
+  "side_table_01": {
+   "width_cm": 55.0,
+   "depth_cm": 45.0,
+@@ -438,6 +769,42 @@
+   ],
+   "front": "+X"
+  },
++ "tea_set_01": {
++  "width_cm": 91.8,
++  "depth_cm": 48.4,
++  "height_cm": 16.5,
++  "centroid_off": [
++   -0.0861,
++   0.0595
++  ],
++  "top_off": [
++   -0.3977,
++   0.2093
++  ],
++  "meshes": 10,
++  "materials": [
++   "tea_set_01"
++  ],
++  "front": "+Z"
++ },
++ "throw_pillows_01": {
++  "width_cm": 94.0,
++  "depth_cm": 45.2,
++  "height_cm": 45.0,
++  "centroid_off": [
++   0.02,
++   -0.0323
++  ],
++  "top_off": [
++   0.0573,
++   -0.1359
++  ],
++  "meshes": 2,
++  "materials": [
++   "throw_pillows_01"
++  ],
++  "front": "+Z"
++ },
+  "vintage_cabinet_01": {
+   "width_cm": 202.2,
+   "depth_cm": 67.0,
+@@ -477,6 +844,221 @@
+   ],
+   "front": "+Z"
+  },
++ "vintage_lighter": {
++  "width_cm": 8.0,
++  "depth_cm": 1.4,
++  "height_cm": 6.5,
++  "centroid_off": [
++   0.1728,
++   -0.0061
++  ],
++  "top_off": [
++   -0.0414,
++   0.0
++  ],
++  "meshes": 4,
++  "materials": [
++   "vintage_lighter",
++   "vintage_lighter_alpha"
++  ],
++  "front": "+Z"
++ },
++ "vintage_microwave": {
++  "width_cm": 107.4,
++  "depth_cm": 74.6,
++  "height_cm": 52.6,
++  "centroid_off": [
++   0.2364,
++   0.0806
++  ],
++  "top_off": [
++   0.2429,
++   0.0274
++  ],
++  "meshes": 1,
++  "materials": [
++   "vintage_microwave",
++   "vintage_microwave_glass"
++  ],
++  "front": "+Z"
++ },
++ "vintage_oil_lamp": {
++  "width_cm": 22.0,
++  "depth_cm": 22.0,
++  "height_cm": 80.2,
++  "centroid_off": [
++   0.0035,
++   -0.005
++  ],
++  "top_off": [
++   0.0,
++   -0.0016
++  ],
++  "meshes": 3,
++  "materials": [
++   "vintage_oil_lamp_glass",
++   "vintage_oil_lamp",
++   "vintage_oil_lamp_flame"
++  ],
++  "front": "+Z"
++ },
++ "vintage_suitcase": {
++  "width_cm": 160.8,
++  "depth_cm": 23.9,
++  "height_cm": 56.8,
++  "centroid_off": [
++   0.0001,
++   -0.0105
++  ],
++  "top_off": [
++   0.0001,
++   -0.0356
++  ],
++  "meshes": 8,
++  "materials": [
++   "vintage_suitcase_01",
++   "vintage_suitcase_02"
++  ],
++  "front": "+Z"
++ },
++ "wall_clock": {
++  "width_cm": 32.0,
++  "depth_cm": 4.7,
++  "height_cm": 32.0,
++  "centroid_off": [
++   -0.0043,
++   -0.0378
++  ],
++  "top_off": [
++   -0.0,
++   0.0139
++  ],
++  "meshes": 4,
++  "materials": [
++   "wall_clock",
++   "wall_clock_glass"
++  ],
++  "front": "+Z"
++ },
++ "wheelchair_01": {
++  "width_cm": 82.4,
++  "depth_cm": 109.1,
++  "height_cm": 110.4,
++  "centroid_off": [
++   -0.0031,
++   0.0452
++  ],
++  "top_off": [
++   -0.0026,
++   -0.0218
++  ],
++  "meshes": 1,
++  "materials": [
++   "lambert1"
++  ],
++  "front": "+Z"
++ },
++ "wicker_basket_01": {
++  "width_cm": 38.3,
++  "depth_cm": 29.5,
++  "height_cm": 11.7,
++  "centroid_off": [
++   -0.0007,
++   -0.0007
++  ],
++  "top_off": [
++   0.0011,
++   -0.0002
++  ],
++  "meshes": 1,
++  "materials": [
++   "wicker_basket_01"
++  ],
++  "front": "+Z"
++ },
++ "wicker_basket_02": {
++  "width_cm": 34.7,
++  "depth_cm": 25.4,
++  "height_cm": 20.0,
++  "centroid_off": [
++   -0.0237,
++   0.0209
++  ],
++  "top_off": [
++   -0.0568,
++   0.037
++  ],
++  "meshes": 2,
++  "materials": [
++   "wicker_basket_02"
++  ],
++  "front": "+Z"
++ },
++ "wine_bottles_01": {
++  "width_cm": 67.6,
++  "depth_cm": 8.1,
++  "height_cm": 33.1,
++  "centroid_off": [
++   0.0133,
++   0.0024
++  ],
++  "top_off": [
++   0.0136,
++   0.0004
++  ],
++  "meshes": 4,
++  "materials": [
++   "wine_bottles_01_glass_orange",
++   "wine_bottles_01_seal_cork",
++   "wine_bottles_01_wine_red",
++   "wine_bottles_01_ftero_vinea_02",
++   "wine_bottles_01_glass_yellow",
++   "wine_bottles_01_wine_clear",
++   "wine_bottles_01_clearwater",
++   "wine_bottles_01_glass_clear",
++   "wine_bottles_01_wine_light_red",
++   "wine_bottles_01_intertwine",
++   "wine_bottles_01_glass_green",
++   "wine_bottles_01_ftero_vinea_01"
++  ],
++  "front": "+Z"
++ },
++ "wooden_bowl_01": {
++  "width_cm": 31.3,
++  "depth_cm": 30.9,
++  "height_cm": 9.4,
++  "centroid_off": [
++   0.0648,
++   -0.0613
++  ],
++  "top_off": [
++   0.1195,
++   -0.0184
++  ],
++  "meshes": 1,
++  "materials": [
++   "wooden_bowl_01"
++  ],
++  "front": "+Z"
++ },
++ "wooden_bucket_01": {
++  "width_cm": 36.7,
++  "depth_cm": 34.2,
++  "height_cm": 55.0,
++  "centroid_off": [
++   -0.0012,
++   0.0007
++  ],
++  "top_off": [
++   0.0032,
++   -0.0026
++  ],
++  "meshes": 2,
++  "materials": [
++   "wooden_bucket_01"
++  ],
++  "front": "+Z"
++ },
+  "wooden_table_02": {
+   "width_cm": 113.4,
+   "depth_cm": 70.6,
+diff --git a/Scripts/vg_materials.py b/Scripts/vg_materials.py
+index 0b119c5..db70e0a 100644
+--- a/Scripts/vg_materials.py
++++ b/Scripts/vg_materials.py
+@@ -444,3 +444,16 @@ def surface_auto_master(default_base, default_normal, default_orm):
+     _connect(_add(mat, _add(mat, nx_t, ny_t, -250, 480), nz_t, -180, 600), "", world_normal, "")
+     _to_prop(world_normal, "", MP.MP_NORMAL)
+     return _finish(mat)
++
++
++def dust_master():
++    """Motas de polvo: translucidas e iluminadas por las luces de la escena (invisibles a oscuras)."""
++    mat, created = _new_material("M_Dust")
++    if not created:
++        return mat
++    safe_set(mat, "blend_mode", unreal.BlendMode.BLEND_TRANSLUCENT)
++    safe_set(mat, "translucency_lighting_mode", unreal.TranslucencyLightingMode.TLM_VOLUMETRIC_NON_DIRECTIONAL)
++    safe_set(mat, "two_sided", True)
++    _to_prop(_vector(mat, "Color", (0.95, 0.9, 0.8, 1), -500, 0), "", MP.MP_BASE_COLOR)
++    _to_prop(_scalar(mat, "Opacity", 0.55, -500, 240), "", MP.MP_OPACITY)
++    return _finish(mat)
+diff --git a/Scripts/vg_room.py b/Scripts/vg_room.py
+index 621b870..6e5648f 100644
+--- a/Scripts/vg_room.py
++++ b/Scripts/vg_room.py
+@@ -361,6 +361,7 @@ def build_materials(res):
+     mats["tv_opaque"] = vm.tv_screen_master(noise, False)
+     mats["photo_master"] = vm.photo_master(defaults["BaseColor"])
+     mats["canvas_master"] = vm.canvas_master(defaults["BaseColor"])
++    mats["dust"] = vm.dust_master()
+ 
+     def surface(name, projection, **scalars):
+         r = res.get(name)
+@@ -616,10 +617,10 @@ def setup_television(tv, prep, mats):
+     safe_set(tv, "static_loop_sound", sfx("tv_static_loop"))
+     # Encendida desde el principio: la nieve es la luz principal del salon.
+     set_bool(tv, "on", True)
+-    safe_set(tv, "glow_lumens", 200.0)
++    safe_set(tv, "glow_lumens", 95.0)
+ 
+ 
+-def setup_lamp(lamp, prep, lumens=80.0):
++def setup_lamp(lamp, prep, lumens=45.0):
+     g = prep.group
+     top = g.centroid(0.2) or [0.0, 0.0]
+     local = V(g.center[0] + top[0] * g.size[0], g.center[1] + top[1] * g.size[1], g.min[2] + g.size[2] * 0.86)
+@@ -909,7 +910,7 @@ def build_lighting(info):
+     moon = spawn_marked(unreal.DirectionalLight, "moon", V(0, 600, 600), R(yaw=-78.0, pitch=-55.0))
+     comp = moon.get_component_by_class(unreal.DirectionalLightComponent)
+     comp.set_mobility(unreal.ComponentMobility.MOVABLE)
+-    safe_set(comp, "intensity", 0.2)
++    safe_set(comp, "intensity", 0.08)
+     safe_set(comp, "light_color", unreal.Color(r=168, g=192, b=255, a=255))
+     safe_set(comp, "atmosphere_sun_light", True)
+ 
+@@ -917,7 +918,7 @@ def build_lighting(info):
+     comp = sky.get_component_by_class(unreal.SkyLightComponent)
+     comp.set_mobility(unreal.ComponentMobility.MOVABLE)
+     safe_set(comp, "real_time_capture", True)
+-    safe_set(comp, "intensity", 0.12)
++    safe_set(comp, "intensity", 0.04)
+     safe_set(comp, "light_color", unreal.Color(r=150, g=170, b=210, a=255))
+ 
+     # Farola fria en la calle: entra en diagonal por la ventana y dibuja las cortinas en la pared.
+@@ -928,7 +929,7 @@ def build_lighting(info):
+     comp = street.get_component_by_class(unreal.SpotLightComponent)
+     comp.set_mobility(unreal.ComponentMobility.MOVABLE)
+     safe_set(comp, "intensity_units", unreal.LightUnits.LUMENS)
+-    safe_set(comp, "intensity", 700.0)
++    safe_set(comp, "intensity", 320.0)
+     safe_set(comp, "use_temperature", True)
+     safe_set(comp, "temperature", 8500.0)
+     safe_set(comp, "attenuation_radius", 1600.0)
+@@ -956,7 +957,7 @@ def build_lighting(info):
+         # ventana y siluetas (y la linterna, F).
+         "auto_exposure_min_brightness": 0.0,
+         "auto_exposure_max_brightness": 2.5,
+-        "auto_exposure_bias": -0.5,
++        "auto_exposure_bias": -1.2,
+         "auto_exposure_speed_up": 0.8,
+         "auto_exposure_speed_down": 0.5,
+         "bloom_intensity": 0.12,
+@@ -1076,78 +1077,215 @@ def at(trigger_actor, x, y, z):
+     return unreal.Transform(location=V(x - c.x, y - c.y, z - c.z))
+ 
+ 
+-def build_loop_events(out, door, lamp, tv, dread, figure):
+-    """Lo que cambia en cada vuelta al bucle del pasillo (estructura tipo P.T.)."""
++def spawn_entity():
++    """La presencia: una figura humana mostrada como silueta casi negra. Oculta hasta que un evento la llama."""
++    r = STATE.get("res", {}).get("entity")
++    mats = STATE.get("mats", {})
++    if not r or "paint" not in mats:
++        warn("Sin modelo para la entidad: no habra apariciones. Ejecuta Tools/fetch_polyhaven.py")
++        return None
++    g = group_for(r)
++    STATE["used"]["entity"] = r
++    height = max(g.size[2], 1.0)
++    scale = 1.0 if 150.0 <= height <= 200.0 else 175.0 / height
++    front, _ = front_direction(r, g, STATE["metrics"])
++    silhouette = vm.instance("MI_Paint_Entity", mats["paint"], None, {"Roughness": 0.7, "Metallic": 0.0},
++                             {"Color": (0.003, 0.003, 0.004, 1)})
++    actor = actor_sub.spawn_actor_from_class(unreal.VGEntity, V(0.0, 0.0, -1500.0), R())
++    actor.setup_entity(g.main, silhouette, V(-g.center[0] * scale, -g.center[1] * scale, -g.min[2] * scale),
++                       -yaw_of(front), scale)
++    safe_set(actor, "chase_loop_sound", sfx("tv_static_loop"))
++    safe_set(actor, "catch_sound", sfx("door_slam"))
++    for lamp in (STATE.get("house") or {}).get("lamps", {}).values():
++        actor.add_linked_lamp(lamp)
++    mark(actor, "entity", "Events")
++    return actor
++
++
++def build_story_events(out, door, lamp, tv, dread, entity):
++    """Progresion por exploracion (sustituye al bucle del pasillo). Cada zona se dispara una vez.
++
++    Pasillo  Al salir del salon: hay alguien de pie al fondo del pasillo, mirandote. Si te acercas, se esfuma.
++    Dormit.  Al llegar junto a la cama: la linterna falla; al volverte, esta en la puerta. Se va al acercarte.
++    Cocina   El fluorescente parpadea, golpes dentro del bano... y el bano se abre solo.
++    Bano     Al entrar: se va la luz, las bombillas vuelven en rojo y algo viene hacia ti por el pasillo.
++             Te persigue hasta alcanzarte (pantalla en negro) o hasta que pasan unos segundos.
++             Despues, la puerta de entrada queda abierta: cruzarla es el final de la demo.
++    """
+     house = STATE.get("house")
+     if not house:
+         return
+     identity = unreal.Transform()
+     doors, lamps = house["doors"], house["lamps"]
+     bulbs = [lamps[k] for k in ("bulb_1", "bulb_2", "bulb_3") if k in lamps]
+-    red = unreal.Transform(scale=V(1.0, 0.12, 0.08))
++    red = unreal.Transform(scale=V(1.0, 0.1, 0.06))
+ 
+-    def loop(key, n):
+-        return trigger(key, (0.0, 0.0, -2000.0), (10.0, 10.0, 10.0), required_loop=n, fire_on_overlap=False)
++    def loc(x, y):
++        return unreal.Transform(location=V(x, y, 0.0))
+ 
+-    # 1a vuelta: todo parece igual... salvo que el salon ya no se abre y el telefono suena dentro.
+-    t = loop("loop_1", 1)
+-    t.add_step(action("DoorClose"), door, 0.0, None, identity, True)
+-    t.add_step(action("DoorLock"), door, 0.5, None, identity, False)
+-    phone = out.get("telephone")
+-    if phone:
+-        t.add_step(action("PhoneRing"), phone.actor, 6.0, None, identity, False)
+-    if "door_bedroom" in doors:
+-        t.add_step(action("DoorOpen"), doors["door_bedroom"], 14.0, None, identity, True)
++    def params(a, b):
++        return unreal.Transform(location=V(a, b, 0.0))
+ 
+-    # 2a vuelta: luz roja, golpes dentro del bano cerrado, la figura al fondo del pasillo.
+-    t = loop("loop_2", 2)
+-    for i, b in enumerate(bulbs):
+-        t.add_step(action("LampColor"), b, 0.0, None, red, False)
+-        t.add_step(action("LampFlicker"), b, 0.3 * i, None, identity, False)
+-    if "door_bathroom" in doors:
+-        t.add_step(action("PlaySound"), doors["door_bathroom"], 5.0, sfx("door_knock"), identity, False)
+-        t.add_step(action("PlaySound"), doors["door_bathroom"], 9.0, sfx("door_locked"), identity, False)
+-    for actor in figure:
+-        t.add_step(action("ToggleVisibility"), actor, 2.0, None, identity, True)
+-    t.add_step(action("AudioPlay"), dread, 1.0, None, identity, False)
+-    for actor in figure:
+-        t.add_step(action("ToggleVisibility"), actor, 12.0, None, identity, True)
+-    t.add_step(action("AudioStop"), dread, 20.0, None, identity, False)
+-
+-    # 3a vuelta: casi a oscuras, susurros, la linterna falla y el bano se abre solo.
+-    t = loop("loop_3", 3)
+-    for b in bulbs[:2]:
+-        t.add_step(action("LampOff"), b, 0.0, None, identity, False)
+-    if len(bulbs) > 2:
+-        t.add_step(action("LampFlicker"), bulbs[2], 1.0, None, identity, False)
+-    t.add_step(action("AudioPlay"), dread, 0.5, None, identity, False)
+-    t.add_step(action("SoundBehindPlayer"), None, 4.0, sfx("whisper"), unreal.Transform(location=V(70, 0, 0)), False)
+-    t.add_step(action("FlashlightFail"), None, 7.0, None, unreal.Transform(location=V(5, 0, 0)), False)
++    def zone(key, room, shrink=40.0, **props):
++        r = ROOMS[room]
++        cx, cy = (r["x0"] + r["x1"]) * 0.5, (r["y0"] + r["y1"]) * 0.5
++        return trigger(key, (cx, cy, 100.0), ((r["x1"] - r["x0"]) * 0.5 - shrink, (r["y1"] - r["y0"]) * 0.5 - shrink, 100.0), **props)
++
++    # --- Pasillo: la figura al fondo ---
++    d_x = STATE.get("salon_door_x", 190.0)
++    t = trigger("story_corridor", (d_x, CORR_YC, 100.0), (60.0, 45.0, 100.0), min_game_time=25.0)
++    if entity:
++        t.add_step(action("EntityAppear"), entity, 0.6, None, loc(-560.0, CORR_YC), False)
++        t.add_step(action("EntityWatch"), entity, 0.7, None, params(430.0, 14.0), False)
++    t.add_step(action("AudioPlay"), dread, 0.6, None, identity, False)
++    t.add_step(action("AudioStop"), dread, 14.0, None, identity, False)
++
++    # --- Dormitorio: en la puerta, a tu espalda ---
++    b = ROOMS["bedroom"]
++    t = trigger("story_bedroom", (330.0, b["y0"] + 150.0, 100.0), (160.0, 110.0, 100.0))
++    t.add_step(action("FlashlightFail"), None, 1.5, None, unreal.Transform(location=V(3.5, 0, 0)), False)
++    t.add_step(action("SoundBehindPlayer"), None, 2.5, sfx("breath"), unreal.Transform(location=V(70, 0, 0)), False)
++    if entity:
++        t.add_step(action("EntityAppear"), entity, 3.0, None, loc(HOUSE_DOORS["door_bedroom"][2], b["y1"] - 45.0), False)
++        t.add_step(action("EntityWatch"), entity, 3.1, None, params(190.0, 12.0), False)
++    if "door_bedroom" in doors:
++        t.add_step(action("DoorSlam"), doors["door_bedroom"], 16.0, None, identity, True)
++
++    # --- Cocina: el bano se abre ---
++    t = zone("story_kitchen", "kitchen", 90.0)
++    if "fluo_kitchen" in lamps:
++        t.add_step(action("LampOn"), lamps["fluo_kitchen"], 1.0, None, identity, False)
++        t.add_step(action("LampFlicker"), lamps["fluo_kitchen"], 1.2, None, unreal.Transform(scale=V(2.5, 1, 1)), False)
++        t.add_step(action("LampOff"), lamps["fluo_kitchen"], 6.0, None, identity, False)
+     if "door_bathroom" in doors:
+-        t.add_step(action("DoorUnlock"), doors["door_bathroom"], 8.0, None, identity, False)
+-        t.add_step(action("DoorOpen"), doors["door_bathroom"], 8.5, None, identity, False)
++        t.add_step(action("PlaySound"), doors["door_bathroom"], 7.5, sfx("door_knock"), identity, False)
++        t.add_step(action("PlaySound"), doors["door_bathroom"], 11.0, sfx("door_locked"), identity, False)
++        t.add_step(action("DoorUnlock"), doors["door_bathroom"], 13.0, None, identity, False)
++        t.add_step(action("DoorOpen"), doors["door_bathroom"], 13.5, None, identity, False)
++
++    # --- Bano: la persecucion ---
++    t = zone("story_bathroom", "bathroom", 60.0)
+     if "fluo_bathroom" in lamps:
+-        t.add_step(action("LampColor"), lamps["fluo_bathroom"], 8.0, None, unreal.Transform(scale=V(0.75, 1.0, 0.85)), False)
+-
+-    # 4a vuelta: el fondo ya no lleva a ningun sitio; la puerta de entrada se abre. Final de la demo.
+-    t = loop("loop_4", 4)
+-    t.add_message_step(1.0, "No hay vuelta atras.", 4.0)
+-    if "door_end" in doors:
+-        t.add_step(action("DoorClose"), doors["door_end"], 0.0, None, identity, False)
+-        t.add_step(action("DoorLock"), doors["door_end"], 0.5, None, identity, False)
++        t.add_step(action("LampOff"), lamps["fluo_bathroom"], 2.0, None, identity, False)
++    for bulb in bulbs:
++        t.add_step(action("LampOff"), bulb, 2.0, None, identity, False)
++        t.add_step(action("LampColor"), bulb, 4.5, None, red, False)
++        t.add_step(action("LampOn"), bulb, 5.0, None, identity, False)
++    t.add_step(action("FlashlightFail"), None, 2.0, None, unreal.Transform(location=V(4.0, 0, 0)), False)
++    t.add_step(action("AudioPlay"), dread, 2.5, None, identity, False)
++    if entity:
++        t.add_step(action("EntityAppear"), entity, 5.2, None, loc(560.0, CORR_YC), False)
++        t.add_step(action("EntityWatch"), entity, 5.3, None, params(0.0, 4.0), False)
++        t.add_step(action("EntityChase"), entity, 7.5, None, params(300.0, 11.0), False)
++    t.add_step(action("AudioStop"), dread, 21.0, None, identity, False)
++    for bulb in bulbs:
++        t.add_step(action("LampOff"), bulb, 20.0, None, identity, False)
+     if "door_front" in doors:
+-        t.add_step(action("DoorUnlock"), doors["door_front"], 3.0, None, identity, False)
+-        t.add_step(action("DoorOpen"), doors["door_front"], 3.5, None, identity, False)
+-    t.add_step(action("AudioStop"), dread, 6.0, None, identity, False)
++        t.add_step(action("DoorUnlock"), doors["door_front"], 22.0, None, identity, False)
++        t.add_step(action("DoorOpen"), doors["door_front"], 22.5, None, identity, False)
++    if bulbs:
++        t.add_step(action("LampColor"), bulbs[0], 22.0, None, unreal.Transform(scale=V(1.0, 0.85, 0.6)), False)
++        t.add_step(action("LampOn"), bulbs[0], 23.0, None, identity, False)
++
++    # --- Salida: fin de la demo ---
+     ex = ROOMS["exit"]
+-    end = trigger("loop_exit", ((ex["x0"] + ex["x1"]) * 0.5, CORR_YC, 100.0), (40.0, 55.0, 100.0))
++    end = trigger("story_exit", ((ex["x0"] + ex["x1"]) * 0.5, CORR_YC, 100.0), (40.0, 45.0, 100.0))
+     end.add_step(action("FlashlightFail"), None, 0.0, None, unreal.Transform(location=V(30, 0, 0)), False)
+-    if bulbs:
+-        for b in bulbs:
+-            end.add_step(action("LampOff"), b, 0.0, None, identity, False)
++    for bulb in bulbs:
++        end.add_step(action("LampOff"), bulb, 0.0, None, identity, False)
+     end.add_message_step(1.5, "VIGILIA  -  Fin de la demo. Gracias por jugar.", 12.0)
+ 
+ 
++def dress_house(out):
++    """Decoracion extra con modelos CC0 de Poly Haven (se descargan solos, sin pasos manuales).
++    Todo va pegado a paredes o sobre muebles: el pasillo y los pasos de puerta quedan libres."""
++    res = STATE.get("res", {})
++
++    def prep(key, **kw):
++        r = res.get(key)
++        return Prep(key, r, **kw) if r else None
++
++    def wall(key, room, side, along, **kw):
++        p = prep(key, face_yaw=FACE[side], **kw)
++        if not p:
++            return None
++        x, y = against(p, room, side, along)
++        return p.spawn(x, y, 0.0, folder="Decor/Dressing")
++
++    def floor(key, x, y, face=None, yaw_extra=0.0):
++        p = prep(key, face_yaw=face, yaw_extra=yaw_extra) if face is not None else prep(key, yaw_extra=yaw_extra)
++        return p.spawn(x, y, 0.0, folder="Decor/Dressing") if p else None
++
++    def on(key, support, dx=0.0, dy=0.0, require_hit=False, **kw):
++        p = prep(key, **kw)
++        if not p or not support:
++            return None
++        return put_on(p, support, dx=dx, dy=dy, folder="Decor/Dressing", require_hit=require_hit)
++
++    def hang(key, room, side, along, center_z):
++        p = prep(key, face_yaw=FACE[side])
++        if not p:
++            return None
++        x, y = against(p, room, side, along, gap=0.3)
++        return p.spawn(x, y, center_z - p.h * 0.5, folder="Decor/Dressing", movable=True)
++
++    # Salon
++    on("d_pillows", out.get("sofa"), dy=-20.0, require_hit=True, long_axis="Y")
++    table = out.get("coffee_table")
++    if table:
++        on("d_cigs", table, dx=-table.wx * 0.25, dy=table.wy * 0.05, yaw_extra=33.0)
++        on("d_lighter", table, dx=-table.wx * 0.25, dy=table.wy * 0.05 + 9.0, yaw_extra=-20.0)
++    on("d_glasses", out.get("side_table"), dx=-6.0, dy=-8.0, yaw_extra=15.0)
++    floor("d_basket", -112.0, -HY + 30.0)
++
++    # Pasillo: solo en las paredes
++    hang("d_wallclock", "corridor", "N", -450.0, 170.0)
++    hang("d_hallframe", "corridor", "S", -320.0, 158.0)
++    hang("d_hallframe2", "corridor", "S", 480.0, 158.0)
++
++    # Cocina
++    house_out = STATE.setdefault("house_out", {})
++    wall("d_kcabinet", "kitchen", "S", -360.0)
++    wall("d_trash", "kitchen", "E", -560.0, yaw_extra=0.0)
++    wall("d_kbasket", "kitchen", "S", -640.0)
++    floor("d_broom", ROOMS["kitchen"]["x1"] - 40.0, ROOMS["kitchen"]["y1"] - 45.0)
++    ktable = house_out.get("kitchen_table")
++    if ktable:
++        on("d_teaset", ktable, dx=0.0, dy=0.0, long_axis="X")
++        on("d_bowl", ktable, dx=ktable.wx * 0.3, dy=-ktable.wy * 0.2)
++    kcab = house_out.get("kitchen_cabinet")
++    if kcab:
++        on("d_bottles", kcab, dx=0.0, dy=kcab.wy * 0.2, long_axis="Y")
++    on("d_pot", house_out.get("kitchen_stove"), dx=-8.0, dy=10.0, require_hit=True)
++
++    # Bano
++    br = ROOMS["bathroom"]
++    floor("d_plunger", br["x0"] + 32.0, br["y1"] - 70.0)
++    floor("d_bleach", br["x1"] - 20.0, br["y0"] + 42.0, yaw_extra=25.0)
++    floor("d_cleaner", br["x1"] - 36.0, br["y0"] + 30.0, yaw_extra=-40.0)
++    floor("d_stool", br["x1"] - 45.0, br["y1"] - 60.0)
++    on("d_duck", house_out.get("bathtub"), dx=25.0, dy=0.0, require_hit=True)
++
++    # Dormitorio
++    bd = ROOMS["bedroom"]
++    floor("d_rocking", bd["x1"] - 160.0, bd["y1"] - 75.0, face=-150.0)   # mirando hacia la cama
++    wall("d_suitcase", "bedroom", "W", -560.0)
++    bed = house_out.get("bed")
++    if bed:
++        floor("d_ottoman", bed.x, bed.max_y + 45.0, yaw_extra=0.0)
++    night = house_out.get("nightstand")
++    if night:
++        on("d_alarm", night, dx=0.0, dy=0.0, face_yaw=90.0)
++
++
++def spawn_dust(mats):
++    """Motas de polvo en suspension (se ven donde les da la luz: linterna, tele, ventana)."""
++    dust = actor_sub.spawn_actor_from_class(unreal.VGDustMotes, V(0, 0, 120), R())
++    dust.setup_dust(eal.load_asset("/Engine/BasicShapes/Cube"), mats["dust"], 380, V(260.0, 260.0, 130.0), 0.4)
++    mark(dust, "dust_motes", "Atmosphere")
++    return dust
++
++
+ def prep_slot(out, key, **kw):
+     r = STATE.get("res", {}).get(key)
+     return Prep(key, r, **kw) if r else None
+@@ -1175,24 +1313,7 @@ def build_scripted_events(out, door, info, lamp, tv):
+         return trigger(key, room_box[0], room_box[1], auto_fire_after=seconds,
+                        require_player_inside=True, fire_on_overlap=False)
+ 
+-    # --- La figura: perchero con un vestido viejo, de pie en el pasillo, oculta hasta el evento ---
+-    figure = []
+-    stand_prep = prep_slot(out, "coat_stand")
+-    if stand_prep:
+-        fx, fy = door_cx + 15.0, hall_y - 10.0
+-        stand = stand_prep.spawn(fx, fy, 0.0, folder="Events", movable=True)
+-        figure.append(stand.actor)
+-        dress_prep = prep_slot(out, "dress")
+-        if dress_prep:
+-            dress = dress_prep.spawn(fx, fy, max(stand.top - dress_prep.h - 12.0, 0.0), folder="Events", movable=True)
+-            dress.actor.attach_to_actor(stand.actor, "", unreal.AttachmentRule.KEEP_WORLD, unreal.AttachmentRule.KEEP_WORLD,
+-                                        unreal.AttachmentRule.KEEP_WORLD, False)
+-            figure.append(dress.actor)
+-        for actor in figure:
+-            actor.set_actor_enable_collision(False)
+-            actor.set_actor_hidden_in_game(True)
+-            for comp in actor.get_components_by_class(unreal.StaticMeshComponent):
+-                no_collision(comp)
++    entity = spawn_entity()
+ 
+     # --- Zumbido de angustia (sube en los momentos clave) ---
+     dread = actor_sub.spawn_actor_from_class(unreal.AmbientSound, V(0, 0, 150), R())
+@@ -1214,18 +1335,17 @@ def build_scripted_events(out, door, info, lamp, tv):
+     knock = 0.75 * steps + 2.2
+     t.add_step(action("PlaySound"), None, knock, sfx("door_knock"), at(t, door_cx, -HY - T - 12.0, 120.0), False)
+     t.add_step(action("FlashlightFail"), None, knock, None, unreal.Transform(location=V(6, 0, 0)), False)
+-    for actor in figure:
+-        t.add_step(action("ToggleVisibility"), actor, knock + 0.5, None, identity, False)
+     t.add_step(action("AudioPlay"), dread, knock + 1.0, None, identity, False)
+     t.add_step(action("PlaySound"), door, knock + 3.0, sfx("door_locked"), identity, False)
+     t.add_step(action("DoorOpen"), door, knock + 5.5, None, identity, False)
+-    # La figura desaparece en cuanto apartas la vista; la puerta se cierra cuando no la miras.
+-    for actor in figure:
+-        t.add_step(action("ToggleVisibility"), actor, knock + 8.0, None, identity, True)
+-    t.add_step(action("DoorClose"), door, knock + 9.0, None, identity, True)
++    if entity:
++        # La puerta se entreabre sola... y hay alguien de pie en el pasillo, al otro lado.
++        t.add_step(action("EntityAppear"), entity, knock + 5.0, None, unreal.Transform(location=V(door_cx + 10.0, hall_y - 25.0, 0.0)), False)
++        t.add_step(action("EntityWatch"), entity, knock + 5.1, None, unreal.Transform(location=V(170.0, 7.0, 0.0)), False)
++    t.add_step(action("DoorClose"), door, knock + 13.0, None, identity, True)
+     t.add_step(action("AudioStop"), dread, knock + 16.0, None, identity, False)
+ 
+-    build_loop_events(out, door, lamp, tv, dread, figure)
++    build_story_events(out, door, lamp, tv, dread, entity)
+ 
+     # --- El busto te sigue con la mirada (solo cuando no lo miras) ---
+     bust = out.get("bust")
+@@ -1501,7 +1621,8 @@ def build_house(res, mats, info, out):
+             f0, f1 = r["x1"] - TW, r["x1"] + TW
+         c0, c1 = c - DOOR_W * 0.5 - JAMB - 1.0, c + DOOR_W * 0.5 + JAMB + 1.0
+         house_door_frame("frame_" + key, axis, c0, c1, f0, f1, mats)
+-        locked = key in ("door_bathroom", "door_front")
++        # La del fondo es una puerta cerrada sin mas (antes era el bucle tipo P.T.).
++        locked = key in ("door_bathroom", "door_front", "door_end")
+         # Todas abren hacia dentro de su estancia, nunca hacia el pasillo (ver signos en VGDoor).
+         open_sign = {"door_front": 1.0}.get(key, -1.0)
+         house["doors"][key] = spawn_house_door(key, axis, c - DOOR_W * 0.5, wall_c, res, mats, locked, open_sign)
+@@ -1517,7 +1638,7 @@ def build_house(res, mats, info, out):
+             g = group_for(bulb_res)
+             lamp.setup_mesh(g.main, V(-g.center[0], g.center[1], g.min[2]), R(roll=180.0))
+         set_bool(lamp, "directly_interactable", False)
+-        lamp.setup_light(V(0, 0, -4.0), 65.0, 2500.0, 520.0)
++        lamp.setup_light(V(0, 0, -4.0), 22.0, 2300.0, 420.0)
+         if i != 1:
+             # Rendimiento: solo la bombilla central proyecta sombras (cada sombra cuesta en la GPU del M4).
+             safe_set(lamp.get_editor_property("light"), "cast_shadows", False)
+@@ -1531,7 +1652,7 @@ def build_house(res, mats, info, out):
+         house["lamps"]["bulb_%d" % (i + 1)] = lamp
+ 
+     # Fluorescentes de cocina (apagado) y bano (encendido, con parpadeo constante tras la puerta cerrada).
+-    for name, room, on, lumens in (("fluo_kitchen", "kitchen", False, 900.0), ("fluo_bathroom", "bathroom", True, 520.0)):
++    for name, room, on, lumens in (("fluo_kitchen", "kitchen", False, 300.0), ("fluo_bathroom", "bathroom", True, 170.0)):
+         r = ROOMS[room]
+         cx, cy = (r["x0"] + r["x1"]) * 0.5, (r["y0"] + r["y1"]) * 0.5
+         lamp = actor_sub.spawn_actor_from_class(unreal.VGLamp, V(cx, cy, H - 8.0), R())
+@@ -1568,18 +1689,6 @@ def build_house(res, mats, info, out):
+                     repeat_interval=6.5, fire_on_overlap=False, once=False)
+         t.add_step(action("LampFlicker"), house["lamps"]["fluo_bathroom"], 0.0, None, unreal.Transform(scale=V(0.6, 1, 1)), False)
+ 
+-    # Bucle: cruzar el vestibulo del fondo te devuelve a la entrada del pasillo.
+-    v = ROOMS["vestibule"]
+-    portal = actor_sub.spawn_actor_from_class(unreal.VGLoopPortal, V((v["x0"] + v["x1"]) * 0.5 + 10.0, CORR_YC, 100.0), R())
+-    portal.set_box_extent(V(22.0, 55.0, 100.0))
+-    dest = actor_sub.spawn_actor_from_class(unreal.TargetPoint, V(CORR_X0 + 120.0 + 10.0, CORR_YC, 100.0), R())
+-    mark(dest, "loop_destination", "House/Loop")
+-    portal.set_destination(dest)
+-    portal.set_door_to_close(house["doors"]["door_end"])
+-    safe_set(portal, "teleport_sound", sfx("door_close"))
+-    mark(portal, "loop_portal", "House/Loop")
+-    house["portal"] = portal
+-
+     # El pasillo pasa a ser el "hall" de los eventos existentes.
+     info["hall"] = dict(x0=CORR_X0 + TW, x1=CORR_X1 - TW, y0=CORR_Y0 + TW, y1=CORR_Y1)
+     return house
+@@ -1601,13 +1710,17 @@ FACE = {"N": -90.0, "S": 90.0, "W": 0.0, "E": 180.0}   # yaw para mirar hacia el
+ 
+ 
+ def furnish_house(res, house):
++    house_out = STATE.setdefault("house_out", {})
++
+     def place(slot, key, room, side, along, folder="House/Furniture", face=True, long_axis=None, yaw_extra=0.0):
+         r = res.get(slot)
+         if not r:
+             return None
+         p = Prep(key, r, face_yaw=FACE[side] if face and not long_axis else None, long_axis=long_axis, yaw_extra=yaw_extra)
+         x, y = against(p, room, side, along)
+-        return p.spawn(x, y, 0.0, folder=folder)
++        placed = p.spawn(x, y, 0.0, folder=folder)
++        house_out[key] = placed
++        return placed
+ 
+     # Cocina: mueble y cocina electrica contra la pared oeste, mesa con dos sillas en el centro.
+     k = ROOMS["kitchen"]
+@@ -1618,6 +1731,7 @@ def furnish_house(res, house):
+         tp = Prep("kitchen_table", table_res, long_axis="X")
+         tx, ty = (k["x0"] + k["x1"]) * 0.5 + 40.0, (k["y0"] + k["y1"]) * 0.5 - 30.0
+         table = tp.spawn(tx, ty, 0.0, folder="House/Furniture")
++        house_out["kitchen_table"] = table
+         chair_res = res.get("kitchen_chair")
+         if chair_res:
+             for i, (dy, face) in enumerate(((-table.wy * 0.5 - 30.0, 90.0), (table.wy * 0.5 + 30.0, -90.0))):
+@@ -1742,6 +1856,7 @@ def build():
+         STATE["overrides"] = load_json("layout_overrides.json", {}) or {}
+     STATE["unverified"], STATE["blockouts"], STATE["used"] = [], [], {}
+     DOOR_LEAF_W[0] = 0.0
++    STATE["house_out"] = {}
+     del WARNINGS[:]
+ 
+     with unreal.ScopedSlowTask(8, "Vigilia: construyendo el salon") as task:
+@@ -1770,7 +1885,11 @@ def build():
+         out = furnish(res, mats, info, photos)
+         task.enter_progress_frame(1, "Iluminacion, audio y eventos")
+         build_lighting(info)
++        STATE["mats"] = mats
++        STATE["salon_door_x"] = info["door"]["x0"] + info["door"]["w"] * 0.5
++        dress_house(out)
+         build_gameplay(out, door, info, mats)
++        spawn_dust(mats)
+         task.enter_progress_frame(1, "Guardando")
+         level_sub.save_current_level()
+         eal.save_directory(ROOT, True, True)
+diff --git a/Source/Vigilia/Private/VGDustMotes.cpp b/Source/Vigilia/Private/VGDustMotes.cpp
+new file mode 100644
+index 0000000..a928e46
+--- /dev/null
++++ b/Source/Vigilia/Private/VGDustMotes.cpp
+@@ -0,0 +1,93 @@
++#include "VGDustMotes.h"
++#include "Components/InstancedStaticMeshComponent.h"
++#include "Engine/StaticMesh.h"
++#include "GameFramework/PlayerController.h"
++#include "Kismet/GameplayStatics.h"
++#include "Materials/MaterialInterface.h"
++
++AVGDustMotes::AVGDustMotes()
++{
++	PrimaryActorTick.bCanEverTick = true;
++
++	Motes = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("Motes"));
++	SetRootComponent(Motes);
++	Motes->SetMobility(EComponentMobility::Movable);
++	Motes->SetCollisionProfileName(TEXT("NoCollision"));
++	Motes->SetGenerateOverlapEvents(false);
++	Motes->SetCastShadow(false);
++	Motes->bAffectDistanceFieldLighting = false;
++	Motes->bAffectDynamicIndirectLighting = false;
++}
++
++void AVGDustMotes::SetupDust(UStaticMesh* InMesh, UMaterialInterface* InMaterial, int32 InCount, FVector InBoxExtent, float InMoteSize)
++{
++	Modify();
++	Motes->Modify();
++	Motes->SetStaticMesh(InMesh);
++	if (InMaterial)
++	{
++		Motes->SetMaterial(0, InMaterial);
++	}
++	Count = InCount;
++	BoxExtent = InBoxExtent;
++	MoteSize = InMoteSize;
++}
++
++void AVGDustMotes::BeginPlay()
++{
++	Super::BeginPlay();
++
++	if (const UStaticMesh* MeshAsset = Motes->GetStaticMesh())
++	{
++		MeshRadius = FMath::Max(static_cast<float>(MeshAsset->GetBounds().SphereRadius), 1.f);
++	}
++	Motes->ClearInstances();
++	Data.Reset(Count);
++	FRandomStream Rng(1994);
++	for (int32 Index = 0; Index < Count; ++Index)
++	{
++		FMote Mote;
++		Mote.Offset = FVector(Rng.FRandRange(-BoxExtent.X, BoxExtent.X), Rng.FRandRange(-BoxExtent.Y, BoxExtent.Y), Rng.FRandRange(-BoxExtent.Z, BoxExtent.Z));
++		Mote.Velocity = FVector(Rng.FRandRange(-1.f, 1.f), Rng.FRandRange(-1.f, 1.f), Rng.FRandRange(-0.6f, 0.25f)) * DriftSpeed;
++		Mote.Scale = Rng.FRandRange(0.5f, 1.6f);
++		Mote.Phase = Rng.FRandRange(0.f, 6.28f);
++		Data.Add(Mote);
++		Motes->AddInstance(FTransform(Mote.Offset), false);
++	}
++}
++
++void AVGDustMotes::Tick(float DeltaSeconds)
++{
++	Super::Tick(DeltaSeconds);
++
++	const APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
++	if (!PC || Data.Num() == 0)
++	{
++		return;
++	}
++	FVector ViewLocation;
++	FRotator ViewRotation;
++	PC->GetPlayerViewPoint(ViewLocation, ViewRotation);
++
++	const float Time = GetWorld()->GetTimeSeconds();
++	const float BaseScale = (MoteSize * 0.5f) / MeshRadius;
++	const FVector Size = BoxExtent * 2.0;
++	for (int32 Index = 0; Index < Data.Num(); ++Index)
++	{
++		FMote& Mote = Data[Index];
++		// Deriva lenta con un vaiven propio de cada mota.
++		const FVector Sway(FMath::Sin(Time * 0.31f + Mote.Phase), FMath::Cos(Time * 0.27f + Mote.Phase * 1.7f), FMath::Sin(Time * 0.19f + Mote.Phase * 0.6f) * 0.5f);
++		Mote.Offset += (Mote.Velocity + Sway * DriftSpeed * 0.6f) * DeltaSeconds;
++
++		// La caja sigue a la camara: lo que sale por un lado entra por el contrario.
++		FVector World = Mote.Offset;
++		FVector Rel = World - ViewLocation;
++		Rel.X = FMath::Fmod(Rel.X + BoxExtent.X, Size.X); if (Rel.X < 0.0) { Rel.X += Size.X; } Rel.X -= BoxExtent.X;
++		Rel.Y = FMath::Fmod(Rel.Y + BoxExtent.Y, Size.Y); if (Rel.Y < 0.0) { Rel.Y += Size.Y; } Rel.Y -= BoxExtent.Y;
++		Rel.Z = FMath::Fmod(Rel.Z + BoxExtent.Z, Size.Z); if (Rel.Z < 0.0) { Rel.Z += Size.Z; } Rel.Z -= BoxExtent.Z;
++		Mote.Offset = ViewLocation + Rel;
++
++		const FTransform Xf(FQuat::Identity, Mote.Offset, FVector(BaseScale * Mote.Scale));
++		Motes->UpdateInstanceTransform(Index, Xf, true, Index == Data.Num() - 1, true);
++	}
++}
+diff --git a/Source/Vigilia/Private/VGEntity.cpp b/Source/Vigilia/Private/VGEntity.cpp
+new file mode 100644
+index 0000000..4df9134
+--- /dev/null
++++ b/Source/Vigilia/Private/VGEntity.cpp
+@@ -0,0 +1,223 @@
++#include "VGEntity.h"
++#include "VGLamp.h"
++#include "VGStatics.h"
++#include "Components/StaticMeshComponent.h"
++#include "Components/AudioComponent.h"
++#include "Camera/PlayerCameraManager.h"
++#include "GameFramework/Pawn.h"
++#include "GameFramework/PlayerController.h"
++#include "Kismet/GameplayStatics.h"
++#include "Materials/MaterialInterface.h"
++#include "Sound/SoundBase.h"
++#include "Engine/StaticMesh.h"
++
++AVGEntity::AVGEntity()
++{
++	PrimaryActorTick.bCanEverTick = true;
++	PrimaryActorTick.bStartWithTickEnabled = false;
++
++	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
++	SetRootComponent(Root);
++
++	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
++	Mesh->SetupAttachment(Root);
++	Mesh->SetMobility(EComponentMobility::Movable);
++	Mesh->SetCollisionProfileName(TEXT("NoCollision"));
++	Mesh->SetGenerateOverlapEvents(false);
++
++	Audio = CreateDefaultSubobject<UAudioComponent>(TEXT("Audio"));
++	Audio->SetupAttachment(Root);
++	Audio->SetRelativeLocation(FVector(0.f, 0.f, 150.f));
++	Audio->bAutoActivate = false;
++	Audio->bOverrideAttenuation = true;
++	Audio->AttenuationOverrides.bSpatialize = true;
++	Audio->AttenuationOverrides.bAttenuate = true;
++	Audio->AttenuationOverrides.FalloffDistance = 1800.f;
++	Audio->AttenuationOverrides.AttenuationShapeExtents = FVector(150.f);
++}
++
++void AVGEntity::SetupEntity(UStaticMesh* InMesh, UMaterialInterface* SilhouetteMaterial, FVector RelativeLocation, float InMeshYawOffset, float UniformScale)
++{
++	Modify();
++	Mesh->Modify();
++	Mesh->SetStaticMesh(InMesh);
++	Mesh->SetRelativeLocation(RelativeLocation);
++	Mesh->SetRelativeScale3D(FVector(UniformScale));
++	MeshYawOffset = InMeshYawOffset;
++	if (InMesh && SilhouetteMaterial)
++	{
++		const int32 Slots = InMesh->GetStaticMaterials().Num();
++		for (int32 Index = 0; Index < Slots; ++Index)
++		{
++			Mesh->SetMaterial(Index, SilhouetteMaterial);
++		}
++	}
++}
++
++void AVGEntity::AddLinkedLamp(AVGLamp* Lamp)
++{
++	if (Lamp)
++	{
++		Modify();
++		LinkedLamps.AddUnique(Lamp);
++	}
++}
++
++void AVGEntity::BeginPlay()
++{
++	Super::BeginPlay();
++	SetActorHiddenInGame(true);
++	State = EVGEntityState::Hidden;
++}
++
++APawn* AVGEntity::GetPlayer() const
++{
++	return UGameplayStatics::GetPlayerPawn(this, 0);
++}
++
++void AVGEntity::FacePlayer()
++{
++	if (const APawn* Player = GetPlayer())
++	{
++		const FVector To = Player->GetActorLocation() - GetActorLocation();
++		const float Yaw = FMath::RadiansToDegrees(FMath::Atan2(To.Y, To.X)) + MeshYawOffset;
++		SetActorRotation(FRotator(0.f, Yaw, 0.f));
++	}
++}
++
++void AVGEntity::FlickerLamps(float Duration)
++{
++	for (AVGLamp* Lamp : LinkedLamps)
++	{
++		if (Lamp && Lamp->IsOn())
++		{
++			Lamp->Flicker(Duration, true);
++		}
++	}
++}
++
++void AVGEntity::Appear(FVector Location)
++{
++	SetActorLocation(Location);
++	FacePlayer();
++	SetActorHiddenInGame(false);
++	State = EVGEntityState::Watching;
++	WatchVanishDistance = 0.f;
++	TimeLeft = 3600.f;
++	SetActorTickEnabled(true);
++	FlickerLamps(0.6f);
++	if (AppearSound)
++	{
++		Audio->SetSound(AppearSound);
++		Audio->SetVolumeMultiplier(0.8f);
++		Audio->Play();
++	}
++}
++
++void AVGEntity::Watch(float VanishDistance, float MaxSeconds)
++{
++	if (State == EVGEntityState::Hidden)
++	{
++		return;
++	}
++	State = EVGEntityState::Watching;
++	WatchVanishDistance = VanishDistance;
++	TimeLeft = FMath::Max(MaxSeconds, 0.5f);
++}
++
++void AVGEntity::Chase(float Speed, float MaxSeconds)
++{
++	if (State == EVGEntityState::Hidden)
++	{
++		return;
++	}
++	State = EVGEntityState::Chasing;
++	ChaseSpeed = Speed;
++	TimeLeft = FMath::Max(MaxSeconds, 0.5f);
++	StepTimer = 0.f;
++	PendingAdvance = 0.f;
++	if (ChaseLoopSound)
++	{
++		Audio->SetSound(ChaseLoopSound);
++		Audio->SetVolumeMultiplier(1.f);
++		Audio->Play();
++	}
++}
++
++void AVGEntity::Vanish(bool bWithSound)
++{
++	if (State == EVGEntityState::Hidden)
++	{
++		return;
++	}
++	State = EVGEntityState::Hidden;
++	SetActorHiddenInGame(true);
++	SetActorTickEnabled(false);
++	Audio->Stop();
++	FlickerLamps(0.5f);
++	if (bWithSound && CatchSound)
++	{
++		UVGStatics::PlaySpatialSound(this, CatchSound, GetActorLocation() + FVector(0.f, 0.f, 150.f), 1.f, 1.f);
++	}
++}
++
++void AVGEntity::Tick(float DeltaSeconds)
++{
++	Super::Tick(DeltaSeconds);
++
++	APawn* Player = GetPlayer();
++	if (!Player || State == EVGEntityState::Hidden)
++	{
++		return;
++	}
++
++	TimeLeft -= DeltaSeconds;
++	FVector To = Player->GetActorLocation() - GetActorLocation();
++	To.Z = 0.f;
++	const float Distance = static_cast<float>(To.Size());
++
++	if (State == EVGEntityState::Watching)
++	{
++		FacePlayer();
++		if (TimeLeft <= 0.f || (WatchVanishDistance > 0.f && Distance < WatchVanishDistance))
++		{
++			Vanish(false);
++		}
++		return;
++	}
++
++	// Persecucion: acumula avance y lo aplica a tirones, como fotogramas que faltan.
++	PendingAdvance += ChaseSpeed * DeltaSeconds;
++	StepTimer -= DeltaSeconds;
++	if (StepTimer <= 0.f)
++	{
++		StepTimer = StepInterval * FMath::FRandRange(0.7f, 1.4f);
++		const float Advance = FMath::Min(PendingAdvance, FMath::Max(Distance - CatchDistance * 0.5f, 0.f));
++		PendingAdvance = 0.f;
++		if (Distance > 1.f)
++		{
++			AddActorWorldOffset(To / Distance * Advance);
++		}
++		FacePlayer();
++	}
++
++	if (Distance <= CatchDistance)
++	{
++		if (APlayerController* PC = Cast<APlayerController>(Player->GetController()))
++		{
++			if (PC->PlayerCameraManager)
++			{
++				PC->PlayerCameraManager->StartCameraFade(1.f, 0.f, 2.2f, FLinearColor::Black, false, false);
++			}
++		}
++		if (CatchSound)
++		{
++			UGameplayStatics::PlaySound2D(this, CatchSound, 1.f);
++		}
++		Vanish(false);
++	}
++	else if (TimeLeft <= 0.f)
++	{
++		Vanish(false);
++	}
++}
+diff --git a/Source/Vigilia/Private/VGEventTrigger.cpp b/Source/Vigilia/Private/VGEventTrigger.cpp
+index 6a42c67..e463155 100644
+--- a/Source/Vigilia/Private/VGEventTrigger.cpp
++++ b/Source/Vigilia/Private/VGEventTrigger.cpp
+@@ -4,6 +4,7 @@
+ #include "VGDoor.h"
+ #include "VGStatics.h"
+ #include "VGPhone.h"
++#include "VGEntity.h"
+ #include "VGPlayerCharacter.h"
+ #include "VGLoopSubsystem.h"
+ #include "Components/AudioComponent.h"
+@@ -337,6 +338,31 @@ void AVGEventTrigger::ExecuteStep(int32 Index)
+ 			Loop->ShowMessage(Step.Message, Duration);
+ 		}
+ 		break;
++	case EVGEventAction::EntityAppear:
++	case EVGEventAction::EntityWatch:
++	case EVGEventAction::EntityChase:
++	case EVGEventAction::EntityVanish:
++		if (AVGEntity* Entity = Cast<AVGEntity>(Target))
++		{
++			const FVector P = Step.Offset.GetLocation();
++			if (Step.Action == EVGEventAction::EntityAppear)
++			{
++				Entity->Appear(P);
++			}
++			else if (Step.Action == EVGEventAction::EntityWatch)
++			{
++				Entity->Watch(static_cast<float>(P.X), static_cast<float>(P.Y));
++			}
++			else if (Step.Action == EVGEventAction::EntityChase)
++			{
++				Entity->Chase(static_cast<float>(P.X), static_cast<float>(P.Y));
++			}
++			else
++			{
++				Entity->Vanish(false);
++			}
++		}
++		break;
+ 	case EVGEventAction::FireTrigger:
+ 		if (AVGEventTrigger* Other = Cast<AVGEventTrigger>(Target))
+ 		{
+diff --git a/Source/Vigilia/Public/VGDustMotes.h b/Source/Vigilia/Public/VGDustMotes.h
+new file mode 100644
+index 0000000..b1962cc
+--- /dev/null
++++ b/Source/Vigilia/Public/VGDustMotes.h
+@@ -0,0 +1,56 @@
++#pragma once
++
++#include "CoreMinimal.h"
++#include "GameFramework/Actor.h"
++#include "VGDustMotes.generated.h"
++
++class UInstancedStaticMeshComponent;
++class UMaterialInterface;
++
++/**
++ * Motas de polvo en suspension alrededor del jugador. Son particulas iluminadas por las luces de la
++ * escena: solo se ven donde hay luz (haz de la linterna, resplandor de la tele, la ventana).
++ * Simuladas en CPU sobre mallas instanciadas: sin dependencias de plugins y con coste minimo.
++ */
++UCLASS()
++class VIGILIA_API AVGDustMotes : public AActor
++{
++	GENERATED_BODY()
++
++public:
++	AVGDustMotes();
++
++	virtual void BeginPlay() override;
++	virtual void Tick(float DeltaSeconds) override;
++
++	UFUNCTION(BlueprintCallable, Category = "Vigilia|Dust")
++	void SetupDust(UStaticMesh* InMesh, UMaterialInterface* InMaterial, int32 InCount, FVector InBoxExtent, float InMoteSize);
++
++	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vigilia")
++	TObjectPtr<UInstancedStaticMeshComponent> Motes;
++
++	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Dust")
++	int32 Count = 350;
++
++	/** Semiejes de la caja (centrada en la camara) en la que flotan las motas. */
++	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Dust")
++	FVector BoxExtent = FVector(260.f, 260.f, 130.f);
++
++	/** Diametro medio de una mota (cm). */
++	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Dust")
++	float MoteSize = 0.35f;
++
++	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Dust")
++	float DriftSpeed = 2.2f;
++
++private:
++	struct FMote
++	{
++		FVector Offset;
++		FVector Velocity;
++		float Scale;
++		float Phase;
++	};
++	TArray<FMote> Data;
++	float MeshRadius = 50.f;
++};
+diff --git a/Source/Vigilia/Public/VGEntity.h b/Source/Vigilia/Public/VGEntity.h
+new file mode 100644
+index 0000000..ab345b6
+--- /dev/null
++++ b/Source/Vigilia/Public/VGEntity.h
+@@ -0,0 +1,103 @@
++#pragma once
++
++#include "CoreMinimal.h"
++#include "GameFramework/Actor.h"
++#include "VGEntity.generated.h"
++
++class UStaticMeshComponent;
++class UAudioComponent;
++class UMaterialInterface;
++class USoundBase;
++class AVGLamp;
++
++UENUM(BlueprintType)
++enum class EVGEntityState : uint8
++{
++	Hidden,
++	Watching,
++	Chasing
++};
++
++/**
++ * La presencia de la casa: una silueta oscura que aparece a lo lejos, te observa y desaparece,
++ * o te persigue a tirones y se desvanece al alcanzarte. No colisiona con nada.
++ */
++UCLASS()
++class VIGILIA_API AVGEntity : public AActor
++{
++	GENERATED_BODY()
++
++public:
++	AVGEntity();
++
++	virtual void BeginPlay() override;
++	virtual void Tick(float DeltaSeconds) override;
++
++	/** Malla y material de silueta. MeshYawOffset: giro para que el frente de la malla mire al jugador. */
++	UFUNCTION(BlueprintCallable, Category = "Vigilia|Entity")
++	void SetupEntity(UStaticMesh* InMesh, UMaterialInterface* SilhouetteMaterial, FVector RelativeLocation, float InMeshYawOffset, float UniformScale);
++
++	/** Aparece de pie en Location (Z = suelo), mirando al jugador. */
++	UFUNCTION(BlueprintCallable, Category = "Vigilia|Entity")
++	void Appear(FVector Location);
++
++	/** Se queda mirando. Desaparece si te acercas a menos de VanishDistance o pasados MaxSeconds. */
++	UFUNCTION(BlueprintCallable, Category = "Vigilia|Entity")
++	void Watch(float VanishDistance, float MaxSeconds);
++
++	/** Te persigue en linea recta, avanzando a tirones. Si te alcanza: fundido a negro y desaparece. */
++	UFUNCTION(BlueprintCallable, Category = "Vigilia|Entity")
++	void Chase(float Speed, float MaxSeconds);
++
++	UFUNCTION(BlueprintCallable, Category = "Vigilia|Entity")
++	void Vanish(bool bWithSound = false);
++
++	/** Lamparas que parpadean cuando aparece o desaparece. */
++	UFUNCTION(BlueprintCallable, Category = "Vigilia|Entity")
++	void AddLinkedLamp(AVGLamp* Lamp);
++
++	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vigilia")
++	TObjectPtr<USceneComponent> Root;
++
++	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vigilia")
++	TObjectPtr<UStaticMeshComponent> Mesh;
++
++	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vigilia")
++	TObjectPtr<UAudioComponent> Audio;
++
++	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Entity")
++	float MeshYawOffset = 0.f;
++
++	/** Distancia a la que "te alcanza" durante una persecucion (cm). */
++	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Entity")
++	float CatchDistance = 75.f;
++
++	/** Segundos entre cada tiron de movimiento (movimiento antinatural, no fluido). */
++	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Entity")
++	float StepInterval = 0.16f;
++
++	UPROPERTY(EditInstanceOnly, BlueprintReadWrite, Category = "Vigilia|Entity")
++	TArray<TObjectPtr<AVGLamp>> LinkedLamps;
++
++	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Audio")
++	TObjectPtr<USoundBase> AppearSound;
++
++	/** Bucle que suena mientras persigue. */
++	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Audio")
++	TObjectPtr<USoundBase> ChaseLoopSound;
++
++	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Audio")
++	TObjectPtr<USoundBase> CatchSound;
++
++private:
++	void FacePlayer();
++	void FlickerLamps(float Duration);
++	APawn* GetPlayer() const;
++
++	EVGEntityState State = EVGEntityState::Hidden;
++	float TimeLeft = 0.f;
++	float WatchVanishDistance = 0.f;
++	float ChaseSpeed = 0.f;
++	float StepTimer = 0.f;
++	float PendingAdvance = 0.f;
++};
+diff --git a/Source/Vigilia/Public/VGEventTrigger.h b/Source/Vigilia/Public/VGEventTrigger.h
+index 57f19db..70dfe66 100644
+--- a/Source/Vigilia/Public/VGEventTrigger.h
++++ b/Source/Vigilia/Public/VGEventTrigger.h
+@@ -42,7 +42,14 @@ enum class EVGEventAction : uint8
+ 	/** Cambia el color de una lampara: Offset.Scale = RGB. */
+ 	LampColor,
+ 	/** Muestra Message en pantalla. Offset.X = duracion (por defecto 4 s). */
+-	ShowMessage
++	ShowMessage,
++	/** La entidad (Target) aparece en Offset.Location (coordenadas de mundo, Z = suelo). */
++	EntityAppear,
++	/** La entidad se queda mirando. Offset.X = distancia a la que se esfuma, Offset.Y = segundos maximos. */
++	EntityWatch,
++	/** La entidad persigue al jugador. Offset.X = velocidad (cm/s), Offset.Y = segundos maximos. */
++	EntityChase,
++	EntityVanish
+ };
+ 
+ USTRUCT(BlueprintType)
+-- 
+2.43.0
+
+
+From 1c4754751bd959ba4d7b735037f8cf72365bffaa Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 14 Nov 2026 19:45:09 +0000
+Subject: [PATCH 2/2] Entidades humanoides animadas: observa, cruza corriendo y
+ persigue
+
+- AVGEntity admite un cuerpo con esqueleto (USkeletalMeshComponent) y animaciones de
+  idle / andar / correr reproducidas en modo de nodo unico; pasos audibles al moverse
+- RunTo: aparece, corre de un punto a otro y se esfuma (accion de evento EntityRunTo)
+- La persecucion es una carrera continua cuando hay cuerpo animado
+- find_character(): usa el primer personaje con esqueleto del proyecto (p. ej. 'Zombie
+  Female: Nurse' de Fab o el maniqui de la plantilla Third Person) y elige sus animaciones
+  por nombre; sin personaje, cae a la estatua en silueta
+- Tres entidades independientes y tres carreras nuevas: por delante de la puerta del salon,
+  al fondo del pasillo metiendose en la cocina y por delante de la puerta de la cocina
+
+Co-Authored-By: Claude Fable 5.2 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01FSNh57Q72v7GgUik5hM21o
+---
+ ASSETS.md                                 |   4 +
+ Scripts/vg_room.py                        | 155 +++++++++++++++++++---
+ Source/Vigilia/Private/VGEntity.cpp       | 148 ++++++++++++++++++++-
+ Source/Vigilia/Private/VGEventTrigger.cpp |  18 +++
+ Source/Vigilia/Public/VGEntity.h          |  48 ++++++-
+ Source/Vigilia/Public/VGEventTrigger.h    |  14 +-
+ 6 files changed, 365 insertions(+), 22 deletions(-)
+
+diff --git a/ASSETS.md b/ASSETS.md
+index 2bf7599..ccde1e8 100644
+--- a/ASSETS.md
++++ b/ASSETS.md
+@@ -45,6 +45,10 @@ Para cada uno: **Add to My Library** en fab.com y despues **Add to Project** des
+ |  | rug | [Old Carpet](https://www.fab.com/listings/f6a088c6-6325-41fe-804f-86c572834b7a) | Quixel Megascans |
+ |  | curtain_fabric | [Furniture Fabric](https://www.fab.com/listings/83ff7c89-d525-4fae-bd8c-4f18dac106a8) | Quixel Megascans |
+ | Opcional | entity | [Madre Statue MEDPOLY](https://www.fab.com/listings/32cab428-889e-49e9-8c89-2ea78696aca2) | sixonetwo (CC-BY: citar al autor en los creditos) |
++| **Imprescindible** | entidades (personaje animado) | [Zombie Female: Nurse](https://www.fab.com/listings/35246f73-70ca-41ac-816b-55ead87dbcbc) | RamsterZ |
+ 
+ Mientras falte alguno, el script usa un respaldo CC0 de Poly Haven si existe (ejecuta `python3 Tools/fetch_polyhaven.py`).
+ El contenido de Fab no se versiona en git (`Content/Fab/` esta en `.gitignore`).
++
++Las entidades usan el primer personaje con esqueleto que encuentren en el proyecto, con sus animaciones de idle, andar y correr.
++Alternativa sin Fab: en el editor, Add > Add Feature or Content Pack > Third Person (maniqui de Unreal; se muestra como silueta negra).
+diff --git a/Scripts/vg_room.py b/Scripts/vg_room.py
+index 6e5648f..c7c3381 100644
+--- a/Scripts/vg_room.py
++++ b/Scripts/vg_room.py
+@@ -1077,28 +1077,126 @@ def at(trigger_actor, x, y, z):
+     return unreal.Transform(location=V(x - c.x, y - c.y, z - c.z))
+ 
+ 
+-def spawn_entity():
+-    """La presencia: una figura humana mostrada como silueta casi negra. Oculta hasta que un evento la llama."""
+-    r = STATE.get("res", {}).get("entity")
++CHARACTER_HINTS = ("zombie", "nurse", "ghost", "woman", "female", "girl", "horror", "monster")
++MANNEQUIN_HINTS = ("mannequin", "manny", "quinn")
++
++
++def find_character():
++    """Busca en el proyecto un personaje con esqueleto y sus animaciones (idle / andar / correr).
++    Vale cualquiera anadido desde Fab (p. ej. 'Zombie Female: Nurse') o el maniqui de la plantilla
++    Third Person de Unreal. Devuelve un dict o None."""
++    from vg_common import class_name, registry
++    try:
++        registry.scan_paths_synchronous(["/Game"], True)
++        datas = list(registry.get_assets_by_path("/Game", recursive=True))
++    except Exception as exc:  # noqa: BLE001
++        warn("No se pudo explorar el proyecto en busca de personajes: %s" % exc)
++        return None
++    meshes = [d for d in datas if class_name(d) == "SkeletalMesh" and not str(d.package_path).startswith(ROOT)]
++    if not meshes:
++        return None
++
++    def score(d):
++        name = (str(d.package_path) + "/" + str(d.asset_name)).lower()
++        if any(h in name for h in CHARACTER_HINTS):
++            return 0
++        if any(h in name for h in MANNEQUIN_HINTS):
++            return 1
++        return 2
++
++    best = sorted(meshes, key=lambda d: (score(d), str(d.asset_name)))[0]
++    mesh = best.get_asset()
++    skeleton = None
++    try:
++        skeleton = mesh.get_editor_property("skeleton")
++    except Exception as exc:  # noqa: BLE001
++        warn("Esqueleto de %s: %s" % (best.asset_name, exc))
++    skel_name = str(skeleton.get_name()) if skeleton else ""
++    top = "/".join(str(best.package_path).split("/")[:4])
++
++    anims = [d for d in datas if class_name(d) == "AnimSequence"]
++    compatible = []
++    for d in anims:
++        tag = ""
++        try:
++            tag = str(d.get_tag_value("Skeleton") or "")
++        except Exception:  # noqa: BLE001
++            tag = ""
++        if skel_name and (("." + skel_name + "'") in tag or tag.endswith("." + skel_name)):
++            compatible.append(d)
++    if not compatible:
++        compatible = [d for d in anims if str(d.package_path).startswith(top)]
++
++    def pick(words, avoid=()):
++        found = [d for d in compatible if any(w in str(d.asset_name).lower() for w in words)
++                 and not any(w in str(d.asset_name).lower() for w in avoid)]
++        # Prefiere las que avanzan de frente y los nombres mas cortos (las variantes llevan sufijos).
++        found.sort(key=lambda d: (0 if any(w in str(d.asset_name).lower() for w in ("fwd", "forward")) else 1,
++                                  len(str(d.asset_name))))
++        return found[0].get_asset() if found else None
++
++    sideways = ("back", "left", "right", "strafe", "turn", "start", "stop", "pivot", "lean", "crouch", "attack")
++    info = {
++        "mesh": mesh,
++        "name": str(best.asset_name),
++        "idle": pick(("idle",), ("turn", "break", "crouch")),
++        "walk": pick(("walk",), sideways),
++        "run": pick(("run", "jog", "sprint"), sideways),
++        "silhouette": score(best) != 0,
++    }
++    log("Personaje para las entidades: %s (idle=%s, andar=%s, correr=%s)" % (
++        info["name"], bool(info["idle"]), bool(info["walk"]), bool(info["run"])))
++    return info
++
++
++def spawn_entity(key="entity"):
++    """Una presencia. Si hay un personaje con esqueleto en el proyecto, es un cuerpo humano animado;
++    si no, una estatua en silueta negra (respaldo). Oculta hasta que un evento la llama."""
+     mats = STATE.get("mats", {})
+-    if not r or "paint" not in mats:
+-        warn("Sin modelo para la entidad: no habra apariciones. Ejecuta Tools/fetch_polyhaven.py")
++    if "paint" not in mats:
+         return None
+-    g = group_for(r)
+-    STATE["used"]["entity"] = r
+-    height = max(g.size[2], 1.0)
+-    scale = 1.0 if 150.0 <= height <= 200.0 else 175.0 / height
+-    front, _ = front_direction(r, g, STATE["metrics"])
+     silhouette = vm.instance("MI_Paint_Entity", mats["paint"], None, {"Roughness": 0.7, "Metallic": 0.0},
+                              {"Color": (0.003, 0.003, 0.004, 1)})
++    if "character" not in STATE:
++        STATE["character"] = find_character()
++    character = STATE["character"]
+     actor = actor_sub.spawn_actor_from_class(unreal.VGEntity, V(0.0, 0.0, -1500.0), R())
+-    actor.setup_entity(g.main, silhouette, V(-g.center[0] * scale, -g.center[1] * scale, -g.min[2] * scale),
+-                       -yaw_of(front), scale)
++    if character:
++        mesh = character["mesh"]
++        scale = 1.0
++        try:
++            height = mesh.get_bounds().box_extent.z * 2.0
++            if height > 1.0 and not 140.0 <= height <= 215.0:
++                scale = 175.0 / height
++        except Exception as exc:  # noqa: BLE001
++            warn("Altura del personaje: %s" % exc)
++        # Los personajes de Unreal miran hacia +Y y tienen el origen en los pies.
++        actor.setup_skeletal(mesh, character["idle"], character["walk"], character["run"],
++                             silhouette if character["silhouette"] else None, V(0, 0, 0), -90.0, scale)
++    else:
++        r = STATE.get("res", {}).get("entity")
++        if not r:
++            warn("Sin modelo para la entidad: no habra apariciones. Ejecuta Tools/fetch_polyhaven.py")
++            actor_sub.destroy_actor(actor)
++            return None
++        if "entity_warned" not in STATE:
++            STATE["entity_warned"] = True
++            warn("No hay ningun personaje con esqueleto en el proyecto: las entidades seran una estatua en "
++                 "silueta, sin animacion. Anade 'Zombie Female: Nurse' desde Fab (ver ASSETS.md).")
++        g = group_for(r)
++        STATE["used"]["entity"] = r
++        height = max(g.size[2], 1.0)
++        scale = 1.0 if 150.0 <= height <= 200.0 else 175.0 / height
++        front, _ = front_direction(r, g, STATE["metrics"])
++        actor.setup_entity(g.main, silhouette, V(-g.center[0] * scale, -g.center[1] * scale, -g.min[2] * scale),
++                           -yaw_of(front), scale)
+     safe_set(actor, "chase_loop_sound", sfx("tv_static_loop"))
+     safe_set(actor, "catch_sound", sfx("door_slam"))
++    for name in ("footstep_wood_01", "footstep_wood_02", "footstep_wood_03"):
++        actor.add_step_sound(sfx(name))
+     for lamp in (STATE.get("house") or {}).get("lamps", {}).values():
+         actor.add_linked_lamp(lamp)
+-    mark(actor, "entity", "Events")
++    mark(actor, key, "Events")
+     return actor
+ 
+ 
+@@ -1173,10 +1271,12 @@ def build_story_events(out, door, lamp, tv, dread, entity):
+         t.add_step(action("LampOn"), bulb, 5.0, None, identity, False)
+     t.add_step(action("FlashlightFail"), None, 2.0, None, unreal.Transform(location=V(4.0, 0, 0)), False)
+     t.add_step(action("AudioPlay"), dread, 2.5, None, identity, False)
+-    if entity:
+-        t.add_step(action("EntityAppear"), entity, 5.2, None, loc(560.0, CORR_YC), False)
+-        t.add_step(action("EntityWatch"), entity, 5.3, None, params(0.0, 4.0), False)
+-        t.add_step(action("EntityChase"), entity, 7.5, None, params(300.0, 11.0), False)
++    chaser = STATE.get("entities", {}).get("chaser") or entity
++    if chaser:
++        # Aparece al fondo, se queda quieta dos segundos... y echa a correr hacia ti.
++        t.add_step(action("EntityAppear"), chaser, 5.2, None, loc(560.0, CORR_YC), False)
++        t.add_step(action("EntityWatch"), chaser, 5.3, None, params(0.0, 6.0), False)
++        t.add_step(action("EntityChase"), chaser, 7.5, None, params(330.0, 12.0), False)
+     t.add_step(action("AudioStop"), dread, 21.0, None, identity, False)
+     for bulb in bulbs:
+         t.add_step(action("LampOff"), bulb, 20.0, None, identity, False)
+@@ -1187,6 +1287,21 @@ def build_story_events(out, door, lamp, tv, dread, entity):
+         t.add_step(action("LampColor"), bulbs[0], 22.0, None, unreal.Transform(scale=V(1.0, 0.85, 0.6)), False)
+         t.add_step(action("LampOn"), bulbs[0], 23.0, None, identity, False)
+ 
++    # --- Carreras: alguien pasa corriendo ---
++    runner = STATE.get("entities", {}).get("runner")
++    if runner:
++        # 1) Estando en el salon cerca de la puerta: pasa corriendo por el pasillo, por delante del hueco.
++        t = trigger("story_run_door", (d_x - 30.0, -HY + 120.0, 100.0), (80.0, 60.0, 100.0), min_game_time=50.0)
++        t.add_entity_run_step(0.4, runner, V(d_x + 430.0, CORR_YC, 0.0), V(d_x - 560.0, CORR_YC, 0.0), 560.0)
++        # 2) Avanzando por el pasillo hacia la cocina: al fondo, alguien cruza corriendo y se mete en ella.
++        kx = HOUSE_DOORS["door_kitchen"][2]
++        t = trigger("story_run_far", (-120.0, CORR_YC, 100.0), (45.0, 45.0, 100.0))
++        t.add_entity_run_step(0.2, runner, V(CORR_X0 + 40.0, CORR_YC + 15.0, 0.0), V(kx, CORR_Y0 + 20.0, 0.0), 450.0)
++        # 3) Dentro de la cocina: pasa por delante de la puerta de la cocina, por el pasillo.
++        k = ROOMS["kitchen"]
++        t = trigger("story_run_kitchen", ((k["x0"] + k["x1"]) * 0.5 + 40.0, k["y0"] + 110.0, 100.0), (150.0, 70.0, 100.0))
++        t.add_entity_run_step(1.0, runner, V(kx + 300.0, CORR_YC, 0.0), V(kx - 190.0, CORR_YC, 0.0), 520.0)
++
+     # --- Salida: fin de la demo ---
+     ex = ROOMS["exit"]
+     end = trigger("story_exit", ((ex["x0"] + ex["x1"]) * 0.5, CORR_YC, 100.0), (40.0, 45.0, 100.0))
+@@ -1313,7 +1428,11 @@ def build_scripted_events(out, door, info, lamp, tv):
+         return trigger(key, room_box[0], room_box[1], auto_fire_after=seconds,
+                        require_player_inside=True, fire_on_overlap=False)
+ 
+-    entity = spawn_entity()
++    # Tres presencias independientes: la que observa, la que cruza corriendo y la que persigue.
++    entity = spawn_entity("entity_watcher")
++    runner = spawn_entity("entity_runner")
++    chaser = spawn_entity("entity_chaser")
++    STATE["entities"] = {"watcher": entity, "runner": runner, "chaser": chaser}
+ 
+     # --- Zumbido de angustia (sube en los momentos clave) ---
+     dread = actor_sub.spawn_actor_from_class(unreal.AmbientSound, V(0, 0, 150), R())
+diff --git a/Source/Vigilia/Private/VGEntity.cpp b/Source/Vigilia/Private/VGEntity.cpp
+index 4df9134..b6f5418 100644
+--- a/Source/Vigilia/Private/VGEntity.cpp
++++ b/Source/Vigilia/Private/VGEntity.cpp
+@@ -2,6 +2,9 @@
+ #include "VGLamp.h"
+ #include "VGStatics.h"
+ #include "Components/StaticMeshComponent.h"
++#include "Components/SkeletalMeshComponent.h"
++#include "Engine/SkeletalMesh.h"
++#include "Animation/AnimationAsset.h"
+ #include "Components/AudioComponent.h"
+ #include "Camera/PlayerCameraManager.h"
+ #include "GameFramework/Pawn.h"
+@@ -25,6 +28,13 @@ AVGEntity::AVGEntity()
+ 	Mesh->SetCollisionProfileName(TEXT("NoCollision"));
+ 	Mesh->SetGenerateOverlapEvents(false);
+ 
++	Body = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Body"));
++	Body->SetupAttachment(Root);
++	Body->SetCollisionProfileName(TEXT("NoCollision"));
++	Body->SetGenerateOverlapEvents(false);
++	// Se anima aunque no este en pantalla: asi no aparece "congelada" al entrar en el encuadre.
++	Body->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
++
+ 	Audio = CreateDefaultSubobject<UAudioComponent>(TEXT("Audio"));
+ 	Audio->SetupAttachment(Root);
+ 	Audio->SetRelativeLocation(FVector(0.f, 0.f, 150.f));
+@@ -54,6 +64,104 @@ void AVGEntity::SetupEntity(UStaticMesh* InMesh, UMaterialInterface* SilhouetteM
+ 	}
+ }
+ 
++void AVGEntity::SetupSkeletal(USkeletalMesh* InMesh, UAnimationAsset* InIdle, UAnimationAsset* InWalk, UAnimationAsset* InRun, UMaterialInterface* SilhouetteMaterial, FVector RelativeLocation, float InMeshYawOffset, float UniformScale)
++{
++	Modify();
++	Body->Modify();
++	Body->SetSkeletalMesh(InMesh);
++	Body->SetRelativeLocation(RelativeLocation);
++	Body->SetRelativeScale3D(FVector(UniformScale));
++	IdleAnim = InIdle;
++	WalkAnim = InWalk;
++	RunAnim = InRun;
++	MeshYawOffset = InMeshYawOffset;
++	if (InMesh && SilhouetteMaterial)
++	{
++		const int32 Slots = InMesh->GetMaterials().Num();
++		for (int32 Index = 0; Index < Slots; ++Index)
++		{
++			Body->SetMaterial(Index, SilhouetteMaterial);
++		}
++	}
++}
++
++bool AVGEntity::HasBody() const
++{
++	return Body && Body->GetSkeletalMeshAsset() != nullptr;
++}
++
++void AVGEntity::AddStepSound(USoundBase* Sound)
++{
++	if (Sound)
++	{
++		Modify();
++		StepSounds.AddUnique(Sound);
++	}
++}
++
++void AVGEntity::PlayAnim(UAnimationAsset* Anim, float Rate)
++{
++	if (!HasBody() || !Anim)
++	{
++		return;
++	}
++	Body->SetAnimationMode(EAnimationMode::AnimationSingleNode);
++	Body->PlayAnimation(Anim, true);
++	Body->SetPlayRate(Rate);
++}
++
++void AVGEntity::PlayMoveAnim(float Speed)
++{
++	// Sin animacion de correr se usa la de andar acelerada (y al reves).
++	if (Speed > 260.f && RunAnim)
++	{
++		PlayAnim(RunAnim, FMath::Clamp(Speed / RunAnimSpeed, 0.7f, 1.8f));
++	}
++	else if (WalkAnim)
++	{
++		PlayAnim(WalkAnim, FMath::Clamp(Speed / WalkAnimSpeed, 0.7f, 3.2f));
++	}
++	else if (RunAnim)
++	{
++		PlayAnim(RunAnim, FMath::Clamp(Speed / RunAnimSpeed, 0.4f, 1.8f));
++	}
++}
++
++void AVGEntity::FaceDirection(const FVector& Direction)
++{
++	const float Yaw = FMath::RadiansToDegrees(FMath::Atan2(Direction.Y, Direction.X)) + MeshYawOffset;
++	SetActorRotation(FRotator(0.f, Yaw, 0.f));
++}
++
++void AVGEntity::Footsteps(float MovedDistance)
++{
++	if (StepSounds.Num() == 0)
++	{
++		return;
++	}
++	StepAccumulator += MovedDistance;
++	if (StepAccumulator >= 85.f)
++	{
++		StepAccumulator = 0.f;
++		USoundBase* Sound = StepSounds[FMath::RandRange(0, StepSounds.Num() - 1)];
++		UVGStatics::PlaySpatialSound(this, Sound, GetActorLocation(), 1.f, FMath::FRandRange(0.9f, 1.05f));
++	}
++}
++
++void AVGEntity::RunTo(FVector From, FVector To, float Speed)
++{
++	SetActorLocation(From);
++	RunTarget = To;
++	RunSpeed = FMath::Max(Speed, 50.f);
++	FaceDirection(To - From);
++	SetActorHiddenInGame(false);
++	State = EVGEntityState::Running;
++	TimeLeft = 30.f;
++	StepAccumulator = 60.f;
++	SetActorTickEnabled(true);
++	PlayMoveAnim(RunSpeed);
++}
++
+ void AVGEntity::AddLinkedLamp(AVGLamp* Lamp)
+ {
+ 	if (Lamp)
+@@ -105,6 +213,7 @@ void AVGEntity::Appear(FVector Location)
+ 	WatchVanishDistance = 0.f;
+ 	TimeLeft = 3600.f;
+ 	SetActorTickEnabled(true);
++	PlayAnim(IdleAnim, 1.f);
+ 	FlickerLamps(0.6f);
+ 	if (AppearSound)
+ 	{
+@@ -136,6 +245,8 @@ void AVGEntity::Chase(float Speed, float MaxSeconds)
+ 	TimeLeft = FMath::Max(MaxSeconds, 0.5f);
+ 	StepTimer = 0.f;
+ 	PendingAdvance = 0.f;
++	StepAccumulator = 60.f;
++	PlayMoveAnim(ChaseSpeed);
+ 	if (ChaseLoopSound)
+ 	{
+ 		Audio->SetSound(ChaseLoopSound);
+@@ -176,6 +287,25 @@ void AVGEntity::Tick(float DeltaSeconds)
+ 	To.Z = 0.f;
+ 	const float Distance = static_cast<float>(To.Size());
+ 
++	if (State == EVGEntityState::Running)
++	{
++		FVector Delta = RunTarget - GetActorLocation();
++		Delta.Z = 0.f;
++		const float Remaining = static_cast<float>(Delta.Size());
++		const float Move = RunSpeed * DeltaSeconds;
++		if (Remaining <= Move || TimeLeft <= 0.f)
++		{
++			// Al llegar se esfuma sin mas: quien mira solo ve que "ya no esta".
++			State = EVGEntityState::Hidden;
++			SetActorHiddenInGame(true);
++			SetActorTickEnabled(false);
++			return;
++		}
++		AddActorWorldOffset(Delta / Remaining * Move);
++		Footsteps(Move);
++		return;
++	}
++
+ 	if (State == EVGEntityState::Watching)
+ 	{
+ 		FacePlayer();
+@@ -186,8 +316,22 @@ void AVGEntity::Tick(float DeltaSeconds)
+ 		return;
+ 	}
+ 
+-	// Persecucion: acumula avance y lo aplica a tirones, como fotogramas que faltan.
+-	PendingAdvance += ChaseSpeed * DeltaSeconds;
++	if (HasBody())
++	{
++		// Cuerpo animado: carrera continua hacia el jugador.
++		if (Distance > CatchDistance * 0.5f)
++		{
++			const float Move = FMath::Min(ChaseSpeed * DeltaSeconds, Distance - CatchDistance * 0.5f);
++			AddActorWorldOffset(To / Distance * Move);
++			Footsteps(Move);
++		}
++		FacePlayer();
++		PendingAdvance = 0.f;
++		StepTimer = 1.f;
++	}
++
++	// Silueta estatica: acumula avance y lo aplica a tirones, como fotogramas que faltan.
++	PendingAdvance += HasBody() ? 0.f : ChaseSpeed * DeltaSeconds;
+ 	StepTimer -= DeltaSeconds;
+ 	if (StepTimer <= 0.f)
+ 	{
+diff --git a/Source/Vigilia/Private/VGEventTrigger.cpp b/Source/Vigilia/Private/VGEventTrigger.cpp
+index e463155..3ff4246 100644
+--- a/Source/Vigilia/Private/VGEventTrigger.cpp
++++ b/Source/Vigilia/Private/VGEventTrigger.cpp
+@@ -51,6 +51,18 @@ void AVGEventTrigger::HandleLoop(int32 LoopCount)
+ 	}
+ }
+ 
++void AVGEventTrigger::AddEntityRunStep(float Delay, AActor* Entity, FVector From, FVector To, float Speed)
++{
++	Modify();
++	FVGEventStep& Step = Steps.AddDefaulted_GetRef();
++	Step.Action = EVGEventAction::EntityRunTo;
++	Step.Target = Entity;
++	Step.Delay = Delay;
++	Step.Offset = FTransform(From);
++	Step.Location2 = To;
++	Step.Value = Speed;
++}
++
+ void AVGEventTrigger::AddMessageStep(float Delay, const FText& Text, float Duration)
+ {
+ 	Modify();
+@@ -338,6 +350,12 @@ void AVGEventTrigger::ExecuteStep(int32 Index)
+ 			Loop->ShowMessage(Step.Message, Duration);
+ 		}
+ 		break;
++	case EVGEventAction::EntityRunTo:
++		if (AVGEntity* Runner = Cast<AVGEntity>(Target))
++		{
++			Runner->RunTo(Step.Offset.GetLocation(), Step.Location2, Step.Value);
++		}
++		break;
+ 	case EVGEventAction::EntityAppear:
+ 	case EVGEventAction::EntityWatch:
+ 	case EVGEventAction::EntityChase:
+diff --git a/Source/Vigilia/Public/VGEntity.h b/Source/Vigilia/Public/VGEntity.h
+index ab345b6..2ffe414 100644
+--- a/Source/Vigilia/Public/VGEntity.h
++++ b/Source/Vigilia/Public/VGEntity.h
+@@ -5,6 +5,9 @@
+ #include "VGEntity.generated.h"
+ 
+ class UStaticMeshComponent;
++class USkeletalMeshComponent;
++class USkeletalMesh;
++class UAnimationAsset;
+ class UAudioComponent;
+ class UMaterialInterface;
+ class USoundBase;
+@@ -15,7 +18,8 @@ enum class EVGEntityState : uint8
+ {
+ 	Hidden,
+ 	Watching,
+-	Chasing
++	Chasing,
++	Running
+ };
+ 
+ /**
+@@ -37,6 +41,17 @@ public:
+ 	UFUNCTION(BlueprintCallable, Category = "Vigilia|Entity")
+ 	void SetupEntity(UStaticMesh* InMesh, UMaterialInterface* SilhouetteMaterial, FVector RelativeLocation, float InMeshYawOffset, float UniformScale);
+ 
++	/** Cuerpo humanoide animado. Las animaciones pueden ser nulas (Run cae a Walk acelerado, etc.). */
++	UFUNCTION(BlueprintCallable, Category = "Vigilia|Entity")
++	void SetupSkeletal(USkeletalMesh* InMesh, UAnimationAsset* InIdle, UAnimationAsset* InWalk, UAnimationAsset* InRun, UMaterialInterface* SilhouetteMaterial, FVector RelativeLocation, float InMeshYawOffset, float UniformScale);
++
++	/** Aparece en From y corre en linea recta hasta To; al llegar se esfuma. */
++	UFUNCTION(BlueprintCallable, Category = "Vigilia|Entity")
++	void RunTo(FVector From, FVector To, float Speed);
++
++	UFUNCTION(BlueprintCallable, Category = "Vigilia|Entity")
++	void AddStepSound(USoundBase* Sound);
++
+ 	/** Aparece de pie en Location (Z = suelo), mirando al jugador. */
+ 	UFUNCTION(BlueprintCallable, Category = "Vigilia|Entity")
+ 	void Appear(FVector Location);
+@@ -62,9 +77,31 @@ public:
+ 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vigilia")
+ 	TObjectPtr<UStaticMeshComponent> Mesh;
+ 
++	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vigilia")
++	TObjectPtr<USkeletalMeshComponent> Body;
++
+ 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Vigilia")
+ 	TObjectPtr<UAudioComponent> Audio;
+ 
++	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Entity")
++	TObjectPtr<UAnimationAsset> IdleAnim;
++
++	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Entity")
++	TObjectPtr<UAnimationAsset> WalkAnim;
++
++	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Entity")
++	TObjectPtr<UAnimationAsset> RunAnim;
++
++	/** Velocidad (cm/s) a la que la animacion de andar/correr se ve natural a ritmo 1. */
++	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Entity")
++	float WalkAnimSpeed = 110.f;
++
++	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Entity")
++	float RunAnimSpeed = 420.f;
++
++	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Audio")
++	TArray<TObjectPtr<USoundBase>> StepSounds;
++
+ 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Entity")
+ 	float MeshYawOffset = 0.f;
+ 
+@@ -91,6 +128,15 @@ public:
+ 
+ private:
+ 	void FacePlayer();
++	void FaceDirection(const FVector& Direction);
++	void PlayAnim(UAnimationAsset* Anim, float Rate);
++	void PlayMoveAnim(float Speed);
++	void Footsteps(float MovedDistance);
++	bool HasBody() const;
++
++	FVector RunTarget = FVector::ZeroVector;
++	float RunSpeed = 0.f;
++	float StepAccumulator = 0.f;
+ 	void FlickerLamps(float Duration);
+ 	APawn* GetPlayer() const;
+ 
+diff --git a/Source/Vigilia/Public/VGEventTrigger.h b/Source/Vigilia/Public/VGEventTrigger.h
+index 70dfe66..b5e6487 100644
+--- a/Source/Vigilia/Public/VGEventTrigger.h
++++ b/Source/Vigilia/Public/VGEventTrigger.h
+@@ -49,7 +49,9 @@ enum class EVGEventAction : uint8
+ 	EntityWatch,
+ 	/** La entidad persigue al jugador. Offset.X = velocidad (cm/s), Offset.Y = segundos maximos. */
+ 	EntityChase,
+-	EntityVanish
++	EntityVanish,
++	/** La entidad aparece en Offset.Location y corre hasta Location2 a Value cm/s; al llegar se esfuma. */
++	EntityRunTo
+ };
+ 
+ USTRUCT(BlueprintType)
+@@ -75,6 +77,12 @@ struct FVGEventStep
+ 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia", meta = (MultiLine = true))
+ 	FText Message;
+ 
++	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia")
++	FVector Location2 = FVector::ZeroVector;
++
++	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia")
++	float Value = 0.f;
++
+ 	/** Espera a que el jugador NO este mirando al Target para ejecutarse (reintenta hasta 40 s). */
+ 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia")
+ 	bool bOnlyWhenUnseen = false;
+@@ -99,6 +107,10 @@ public:
+ 	UFUNCTION(BlueprintCallable, Category = "Vigilia|Events")
+ 	void SetBoxExtent(FVector Extent);
+ 
++	/** La entidad cruza corriendo de From a To. */
++	UFUNCTION(BlueprintCallable, Category = "Vigilia|Events")
++	void AddEntityRunStep(float Delay, AActor* Entity, FVector From, FVector To, float Speed);
++
+ 	/** Paso con texto (para ShowMessage). */
+ 	UFUNCTION(BlueprintCallable, Category = "Vigilia|Events")
+ 	void AddMessageStep(float Delay, const FText& Text, float Duration);
+-- 
+2.43.0
+
