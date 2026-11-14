@@ -44,7 +44,7 @@ AVGPlayerCharacter::AVGPlayerCharacter()
 	Flashlight->SetAttenuationRadius(1100.f);
 	Flashlight->bUseTemperature = true;
 	Flashlight->Temperature = 4300.f;
-	Flashlight->SetVisibility(false);
+	Flashlight->SetVisibility(true);
 
 	// Luz de examen: suave, por encima y a la izquierda de la camara, con alcance corto para que solo
 	// ilumine el objeto que tienes en la mano (no el resto de la habitacion).

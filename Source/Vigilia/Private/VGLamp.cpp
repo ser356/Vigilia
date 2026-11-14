@@ -7,7 +7,8 @@ AVGLamp::AVGLamp()
 	Light->SetupAttachment(Root);
 	Light->SetMobility(EComponentMobility::Movable);
 	Light->SetIntensityUnits(ELightUnits::Lumens);
-	Light->SetIntensity(OnIntensity);
+	Light->SetIntensity(0.f);
+	Light->SetVisibility(false);
 	Light->bUseTemperature = true;
 	Light->Temperature = 2700.f;
 	Light->SetAttenuationRadius(700.f);
@@ -26,7 +27,7 @@ void AVGLamp::SetupLight(FVector RelativeLocation, float Lumens, float Temperatu
 	OnIntensity = Lumens;
 	Light->SetRelativeLocation(RelativeLocation);
 	Light->SetIntensityUnits(ELightUnits::Lumens);
-	Light->SetIntensity(Lumens);
+	ApplyState(1.f);
 	Light->bUseTemperature = true;
 	Light->SetTemperature(Temperature);
 	Light->SetAttenuationRadius(AttenuationRadius);

@@ -2,7 +2,7 @@
 # Vigilia - preparacion completa en macOS (Apple Silicon) con un solo comando:
 #   1) descarga los assets CC0 de respaldo (Poly Haven)
 #   2) compila el modulo C++ del juego
-#   3) abre el editor y construye el salon automaticamente
+#   3) abre el editor y construye la mansion automaticamente
 #
 # Uso:  ./Tools/setup_mac.sh            (detecta Unreal en /Users/Shared/Epic Games)
 #       UE_ROOT="/ruta/a/UE_5.8" ./Tools/setup_mac.sh
@@ -34,9 +34,9 @@ python3 "$PROJECT_DIR/Tools/fetch_polyhaven.py"
 echo "==> [2/3] Compilando VigiliaEditor (Development, Mac)"
 "$UE_ROOT/Engine/Build/BatchFiles/Mac/Build.sh" VigiliaEditor Mac Development -project="$UPROJECT" -waitmutex
 
-echo "==> [3/3] Abriendo el editor y construyendo el salon (la primera vez compila shaders: paciencia)"
+echo "==> [3/3] Abriendo el editor y construyendo la mansion (la primera vez compila shaders: paciencia)"
 EDITOR="$UE_ROOT/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor"
 "$EDITOR" "$UPROJECT" -ExecutePythonScript="$PROJECT_DIR/Scripts/build_room.py" -log &
 echo
-echo "Editor lanzado. Cuando termine veras el nivel L_LivingRoom: pulsa Play (Alt+P)."
+echo "Editor lanzado. Cuando termine veras el nivel L_Mansion: pulsa Play (Alt+P)."
 echo "Informe de assets usados y pendientes: $PROJECT_DIR/Saved/Vigilia/asset_report.md"

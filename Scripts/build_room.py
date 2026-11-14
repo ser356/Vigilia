@@ -1,4 +1,4 @@
-"""Punto de entrada: construye (o reconstruye) el salon completo.
+"""Punto de entrada: construye (o reconstruye) la mansion completo.
 
 Desde el editor:   Tools > Execute Python Script...  -> Scripts/build_room.py
 Desde la consola:  py "Scripts/build_room.py"
