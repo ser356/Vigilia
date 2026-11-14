@@ -61,12 +61,40 @@ FVector AVGDoor::SetupDoorMesh(UStaticMesh* InMesh, float TargetWidth)
 		}
 	}
 
-	const FVector Offset(-(R.Min.X + R.Max.X) * 0.5f, -R.Min.Y, -R.Min.Z);
+	// Ancho VISIBLE de la hoja: los extremos de los vertices a media altura (percentiles 1-99),
+	// no la caja envolvente, que puede incluir bisagras, topes o piezas sueltas mas anchas que la hoja.
+	double LeafMinY = R.Min.Y;
+	double LeafMaxY = R.Max.Y;
+	if (InMesh->GetRenderData() && InMesh->GetRenderData()->LODResources.Num() > 0)
+	{
+		const FPositionVertexBuffer& Positions = InMesh->GetRenderData()->LODResources[0].VertexBuffers.PositionVertexBuffer;
+		const FTransform RotOnly(Rot);
+		const double ZLow = R.Min.Z + (R.Max.Z - R.Min.Z) * 0.15;
+		const double ZHigh = R.Min.Z + (R.Max.Z - R.Min.Z) * 0.85;
+		TArray<double> Ys;
+		Ys.Reserve(static_cast<int32>(Positions.GetNumVertices()));
+		for (uint32 Index = 0; Index < Positions.GetNumVertices(); ++Index)
+		{
+			const FVector P = RotOnly.TransformPosition(FVector(Positions.VertexPosition(Index)));
+			if (P.Z >= ZLow && P.Z <= ZHigh)
+			{
+				Ys.Add(P.Y);
+			}
+		}
+		if (Ys.Num() > 50)
+		{
+			Ys.Sort();
+			LeafMinY = Ys[Ys.Num() / 100];
+			LeafMaxY = Ys[Ys.Num() - 1 - Ys.Num() / 100];
+		}
+	}
+
+	const FVector Offset(-(R.Min.X + R.Max.X) * 0.5f, -LeafMinY, -R.Min.Z);
 	Mesh->SetRelativeLocationAndRotation(Offset, Rot);
 
 	// Ancho exacto de la hoja: se escala la bisagra (gira con la hoja, sin deformarla).
 	Hinge->Modify();
-	const double Width = FMath::Max(R.Max.Y - R.Min.Y, 1.0);
+	const double Width = FMath::Max(LeafMaxY - LeafMinY, 1.0);
 	const double ScaleY = TargetWidth > 1.f ? TargetWidth / Width : 1.0;
 	Hinge->SetRelativeScale3D(FVector(1.0, ScaleY, 1.0));
 	return FVector(R.Max.X - R.Min.X, Width * ScaleY, R.Max.Z - R.Min.Z);
