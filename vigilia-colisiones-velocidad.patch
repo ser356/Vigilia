@@ -1,0 +1,168 @@
+From 1a3a66b8f2ae3aa4a4983e1d5cd4065431f74bb1 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 14 Nov 2026 09:33:15 +0000
+Subject: [PATCH] Bloqueos invisibles, velocidad y sensibilidad
+
+- no_collision(): los objetos sin colision usan el perfil NoCollision. Con
+  set_collision_enabled() a secas el componente conservaba el perfil BlockAll y al iniciar
+  la partida volvia a bloquear: la figura oculta del pasillo (delante de la puerta del
+  dormitorio) taponaba el pasillo y la entrada al dormitorio
+- La figura desactiva ademas la colision del actor entero
+- Andar 150 -> 250 cm/s, correr 310 -> 430, mas aceleracion
+- Sensibilidad del raton x2,9 (0,14 -> 0,4 grados por unidad)
+
+Co-Authored-By: Claude Fable 5.2 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01FSNh57Q72v7GgUik5hM21o
+---
+ Config/DefaultGame.ini                       |  4 ++--
+ Scripts/vg_room.py                           | 22 ++++++++++++++------
+ Source/Vigilia/Private/VGPlayerCharacter.cpp |  4 ++--
+ Source/Vigilia/Private/VGTelevision.cpp      |  2 +-
+ Source/Vigilia/Public/VGPlayerCharacter.h    |  4 ++--
+ 5 files changed, 23 insertions(+), 13 deletions(-)
+
+diff --git a/Config/DefaultGame.ini b/Config/DefaultGame.ini
+index 2ea3280..ecfad6f 100644
+--- a/Config/DefaultGame.ini
++++ b/Config/DefaultGame.ini
+@@ -16,8 +16,8 @@ bUsePakFile=True
+ [/Script/Vigilia.VGPlayerCharacter]
+ MouseSensitivity=1.0
+ bInvertLookY=False
+-WalkSpeed=150.0
+-RunSpeed=310.0
++WalkSpeed=250.0
++RunSpeed=430.0
+ +FootstepSounds=/Game/Vigilia/Audio/SFX/footstep_wood_01.footstep_wood_01
+ +FootstepSounds=/Game/Vigilia/Audio/SFX/footstep_wood_02.footstep_wood_02
+ +FootstepSounds=/Game/Vigilia/Audio/SFX/footstep_wood_03.footstep_wood_03
+diff --git a/Scripts/vg_room.py b/Scripts/vg_room.py
+index f409a07..621b870 100644
+--- a/Scripts/vg_room.py
++++ b/Scripts/vg_room.py
+@@ -57,6 +57,15 @@ def set_bool(obj, name, value):
+     return False
+ 
+ 
++def no_collision(comp):
++    """Quita la colision de verdad. set_collision_enabled() solo no basta: el componente conserva su
++    perfil ("BlockAll") y al empezar la partida Unreal vuelve a aplicarlo, con lo que el objeto bloquea
++    aunque no se vea (asi la figura oculta del pasillo taponaba el paso). Hay que cambiar el perfil."""
++    comp.set_collision_profile_name("NoCollision")
++    comp.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
++    safe_set(comp, "generate_overlap_events", False)
++
++
+ def mark(actor, key, folder, auto=None):
+     tags = [TAG]
+     if key:
+@@ -80,7 +89,7 @@ def box(key, mn, mx, material, folder="Room", collision=True, shadow=True):
+     comp = actor.static_mesh_component
+     comp.set_material(0, material)
+     if not collision:
+-        comp.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
++        no_collision(comp)
+     if not shadow:
+         safe_set(comp, "cast_shadow", False)
+     mark(actor, key, folder)
+@@ -537,13 +546,13 @@ def build_window(res, mats, info):
+             actor.set_actor_scale3d(V(abs(local.x) or 1.0, abs(local.y) or 1.0, abs(local.z) or 1.0))
+             comp = actor.static_mesh_component
+             comp.set_material(0, mats["curtain"])
+-            comp.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
++            no_collision(comp)
+             mark(actor, "curtain_" + side, "Room")
+     cyl = eal.load_asset("/Engine/BasicShapes/Cylinder")
+     rod = actor_sub.spawn_actor_from_object(cyl, V(w["cx"], HY - 9.0, top + 1.5), R(pitch=90.0))
+     rod.set_actor_scale3d(V(0.025, 0.025, (w["w"] + 110.0) / 100.0))
+     rod.static_mesh_component.set_material(0, mats["brass"])
+-    rod.static_mesh_component.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
++    no_collision(rod.static_mesh_component)
+     mark(rod, "curtain_rod", "Room")
+ 
+ 
+@@ -838,7 +847,7 @@ def spawn_canvas(key, placed, wall, mats, photo, mirror=False):
+     actor.set_actor_scale3d(V(width / 100.0, height / 100.0, 1.0))
+     comp = actor.static_mesh_component
+     comp.set_mobility(unreal.ComponentMobility.MOVABLE)
+-    comp.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
++    no_collision(comp)
+     crop_u, crop_v = _cover_crop(_aspect(photo), width / max(height, 1.0))
+     inst = vm.instance("MI_Canvas_%s%s" % (key, "_mirror" if mirror else ""), mats["canvas_master"], {"Image": photo},
+                        {"CropU": crop_u, "CropV": crop_v, "Mirror": 1.0 if mirror else 0.0,
+@@ -1180,9 +1189,10 @@ def build_scripted_events(out, door, info, lamp, tv):
+                                         unreal.AttachmentRule.KEEP_WORLD, False)
+             figure.append(dress.actor)
+         for actor in figure:
++            actor.set_actor_enable_collision(False)
+             actor.set_actor_hidden_in_game(True)
+             for comp in actor.get_components_by_class(unreal.StaticMeshComponent):
+-                comp.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
++                no_collision(comp)
+ 
+     # --- Zumbido de angustia (sube en los momentos clave) ---
+     dread = actor_sub.spawn_actor_from_class(unreal.AmbientSound, V(0, 0, 150), R())
+@@ -1516,7 +1526,7 @@ def build_house(res, mats, info, out):
+         cord = actor_sub.spawn_actor_from_object(eal.load_asset("/Engine/BasicShapes/Cylinder"), V(x, CORR_YC, H - 14.0), R())
+         cord.set_actor_scale3d(V(0.006, 0.006, 0.28))
+         cord.static_mesh_component.set_material(0, mats["blockout"])
+-        cord.static_mesh_component.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
++        no_collision(cord.static_mesh_component)
+         mark(cord, None, "House/Lights")
+         house["lamps"]["bulb_%d" % (i + 1)] = lamp
+ 
+diff --git a/Source/Vigilia/Private/VGPlayerCharacter.cpp b/Source/Vigilia/Private/VGPlayerCharacter.cpp
+index 6deadaf..201a733 100644
+--- a/Source/Vigilia/Private/VGPlayerCharacter.cpp
++++ b/Source/Vigilia/Private/VGPlayerCharacter.cpp
+@@ -69,7 +69,7 @@ AVGPlayerCharacter::AVGPlayerCharacter()
+ 
+ 	UCharacterMovementComponent* Move = GetCharacterMovement();
+ 	Move->MaxWalkSpeed = WalkSpeed;
+-	Move->MaxAcceleration = 900.f;
++	Move->MaxAcceleration = 1400.f;
+ 	Move->BrakingDecelerationWalking = 1100.f;
+ 	Move->GroundFriction = 7.f;
+ 	Move->MaxStepHeight = 30.f;
+@@ -218,7 +218,7 @@ void AVGPlayerCharacter::OnLook(const FInputActionValue& Value)
+ 	// heredadas de entrada (InputYawScale/InputPitchScale). Mouse2D da Y positiva hacia arriba.
+ 	if (AController* PC = GetController())
+ 	{
+-		const float Scale = 0.14f * MouseSensitivity;
++		const float Scale = 0.4f * MouseSensitivity;
+ 		FRotator Rot = PC->GetControlRotation();
+ 		Rot.Yaw += Axis.X * Scale;
+ 		const float Pitch = FRotator::NormalizeAxis(Rot.Pitch) + Axis.Y * Scale * (bInvertLookY ? -1.f : 1.f);
+diff --git a/Source/Vigilia/Private/VGTelevision.cpp b/Source/Vigilia/Private/VGTelevision.cpp
+index a81ab03..92c301c 100644
+--- a/Source/Vigilia/Private/VGTelevision.cpp
++++ b/Source/Vigilia/Private/VGTelevision.cpp
+@@ -8,7 +8,7 @@ AVGTelevision::AVGTelevision()
+ {
+ 	ScreenPlane = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ScreenPlane"));
+ 	ScreenPlane->SetupAttachment(Root);
+-	ScreenPlane->SetCollisionEnabled(ECollisionEnabled::NoCollision);
++	ScreenPlane->SetCollisionProfileName(TEXT("NoCollision"));
+ 	ScreenPlane->SetCastShadow(false);
+ 	ScreenPlane->SetVisibility(false);
+ 
+diff --git a/Source/Vigilia/Public/VGPlayerCharacter.h b/Source/Vigilia/Public/VGPlayerCharacter.h
+index 063b32c..160fab5 100644
+--- a/Source/Vigilia/Public/VGPlayerCharacter.h
++++ b/Source/Vigilia/Public/VGPlayerCharacter.h
+@@ -79,10 +79,10 @@ public:
+ 	bool bInvertLookY = false;
+ 
+ 	UPROPERTY(Config, EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Movement")
+-	float WalkSpeed = 150.f;
++	float WalkSpeed = 250.f;
+ 
+ 	UPROPERTY(Config, EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Movement")
+-	float RunSpeed = 310.f;
++	float RunSpeed = 430.f;
+ 
+ 	/** Distancia recorrida entre pasos al andar (cm). */
+ 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Audio")
+-- 
+2.43.0
+
