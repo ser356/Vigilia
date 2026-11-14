@@ -79,10 +79,10 @@ public:
 	bool bInvertLookY = false;
 
 	UPROPERTY(Config, EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Movement")
-	float WalkSpeed = 150.f;
+	float WalkSpeed = 250.f;
 
 	UPROPERTY(Config, EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Movement")
-	float RunSpeed = 310.f;
+	float RunSpeed = 430.f;
 
 	/** Distancia recorrida entre pasos al andar (cm). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Audio")

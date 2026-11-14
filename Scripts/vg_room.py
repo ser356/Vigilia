@@ -57,6 +57,15 @@ def set_bool(obj, name, value):
     return False
 
 
+def no_collision(comp):
+    """Quita la colision de verdad. set_collision_enabled() solo no basta: el componente conserva su
+    perfil ("BlockAll") y al empezar la partida Unreal vuelve a aplicarlo, con lo que el objeto bloquea
+    aunque no se vea (asi la figura oculta del pasillo taponaba el paso). Hay que cambiar el perfil."""
+    comp.set_collision_profile_name("NoCollision")
+    comp.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
+    safe_set(comp, "generate_overlap_events", False)
+
+
 def mark(actor, key, folder, auto=None):
     tags = [TAG]
     if key:
@@ -80,7 +89,7 @@ def box(key, mn, mx, material, folder="Room", collision=True, shadow=True):
     comp = actor.static_mesh_component
     comp.set_material(0, material)
     if not collision:
-        comp.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
+        no_collision(comp)
     if not shadow:
         safe_set(comp, "cast_shadow", False)
     mark(actor, key, folder)
@@ -537,13 +546,13 @@ def build_window(res, mats, info):
             actor.set_actor_scale3d(V(abs(local.x) or 1.0, abs(local.y) or 1.0, abs(local.z) or 1.0))
             comp = actor.static_mesh_component
             comp.set_material(0, mats["curtain"])
-            comp.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
+            no_collision(comp)
             mark(actor, "curtain_" + side, "Room")
     cyl = eal.load_asset("/Engine/BasicShapes/Cylinder")
     rod = actor_sub.spawn_actor_from_object(cyl, V(w["cx"], HY - 9.0, top + 1.5), R(pitch=90.0))
     rod.set_actor_scale3d(V(0.025, 0.025, (w["w"] + 110.0) / 100.0))
     rod.static_mesh_component.set_material(0, mats["brass"])
-    rod.static_mesh_component.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
+    no_collision(rod.static_mesh_component)
     mark(rod, "curtain_rod", "Room")
 
 
@@ -838,7 +847,7 @@ def spawn_canvas(key, placed, wall, mats, photo, mirror=False):
     actor.set_actor_scale3d(V(width / 100.0, height / 100.0, 1.0))
     comp = actor.static_mesh_component
     comp.set_mobility(unreal.ComponentMobility.MOVABLE)
-    comp.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
+    no_collision(comp)
     crop_u, crop_v = _cover_crop(_aspect(photo), width / max(height, 1.0))
     inst = vm.instance("MI_Canvas_%s%s" % (key, "_mirror" if mirror else ""), mats["canvas_master"], {"Image": photo},
                        {"CropU": crop_u, "CropV": crop_v, "Mirror": 1.0 if mirror else 0.0,
@@ -1180,9 +1189,10 @@ def build_scripted_events(out, door, info, lamp, tv):
                                         unreal.AttachmentRule.KEEP_WORLD, False)
             figure.append(dress.actor)
         for actor in figure:
+            actor.set_actor_enable_collision(False)
             actor.set_actor_hidden_in_game(True)
             for comp in actor.get_components_by_class(unreal.StaticMeshComponent):
-                comp.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
+                no_collision(comp)
 
     # --- Zumbido de angustia (sube en los momentos clave) ---
     dread = actor_sub.spawn_actor_from_class(unreal.AmbientSound, V(0, 0, 150), R())
@@ -1516,7 +1526,7 @@ def build_house(res, mats, info, out):
         cord = actor_sub.spawn_actor_from_object(eal.load_asset("/Engine/BasicShapes/Cylinder"), V(x, CORR_YC, H - 14.0), R())
         cord.set_actor_scale3d(V(0.006, 0.006, 0.28))
         cord.static_mesh_component.set_material(0, mats["blockout"])
-        cord.static_mesh_component.set_collision_enabled(unreal.CollisionEnabled.NO_COLLISION)
+        no_collision(cord.static_mesh_component)
         mark(cord, None, "House/Lights")
         house["lamps"]["bulb_%d" % (i + 1)] = lamp
 
