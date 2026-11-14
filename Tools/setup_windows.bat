@@ -12,6 +12,6 @@ echo [1/3] Descargando assets CC0 de Poly Haven
 python "%PROJECT_DIR%\Tools\fetch_polyhaven.py" || exit /b 1
 echo [2/3] Compilando VigiliaEditor (Development, Win64)
 call "%UE_ROOT%\Engine\Build\BatchFiles\Build.bat" VigiliaEditor Win64 Development -project="%PROJECT_DIR%\Vigilia.uproject" -waitmutex || exit /b 1
-echo [3/3] Abriendo el editor y construyendo el salon
+echo [3/3] Abriendo el editor y construyendo la mansion
 start "" "%UE_ROOT%\Engine\Binaries\Win64\UnrealEditor.exe" "%PROJECT_DIR%\Vigilia.uproject" -ExecutePythonScript="%PROJECT_DIR%\Scripts\build_room.py" -log
 endlocal

@@ -13,6 +13,8 @@
 #include "Materials/MaterialInterface.h"
 #include "Sound/SoundBase.h"
 #include "Engine/StaticMesh.h"
+#include "Engine/World.h"
+#include "EngineUtils.h"
 
 AVGEntity::AVGEntity()
 {
@@ -150,6 +152,11 @@ void AVGEntity::Footsteps(float MovedDistance)
 
 void AVGEntity::RunTo(FVector From, FVector To, float Speed)
 {
+	if (!CanManifestAt(From))
+	{
+		return;
+	}
+	LastAppearanceTime = GetWorld()->GetTimeSeconds();
 	SetActorLocation(From);
 	RunTarget = To;
 	RunSpeed = FMath::Max(Speed, 50.f);
@@ -206,12 +213,18 @@ void AVGEntity::FlickerLamps(float Duration)
 
 void AVGEntity::Appear(FVector Location)
 {
+	if (!CanManifestAt(Location))
+	{
+		return;
+	}
+	LastAppearanceTime = GetWorld()->GetTimeSeconds();
+	GazeTime = 0.f;
 	SetActorLocation(Location);
 	FacePlayer();
 	SetActorHiddenInGame(false);
 	State = EVGEntityState::Watching;
-	WatchVanishDistance = 0.f;
-	TimeLeft = 3600.f;
+	WatchVanishDistance = 600.f;
+	TimeLeft = 5.f;
 	SetActorTickEnabled(true);
 	PlayAnim(IdleAnim, 1.f);
 	FlickerLamps(0.6f);
@@ -230,13 +243,13 @@ void AVGEntity::Watch(float VanishDistance, float MaxSeconds)
 		return;
 	}
 	State = EVGEntityState::Watching;
-	WatchVanishDistance = VanishDistance;
-	TimeLeft = FMath::Max(MaxSeconds, 0.5f);
+	WatchVanishDistance = FMath::Max(VanishDistance, 600.f);
+	TimeLeft = FMath::Clamp(MaxSeconds, 0.5f, 5.f);
 }
 
 void AVGEntity::Chase(float Speed, float MaxSeconds)
 {
-	if (State == EVGEntityState::Hidden)
+	if (!bAllowChase || State == EVGEntityState::Hidden)
 	{
 		return;
 	}
@@ -308,8 +321,20 @@ void AVGEntity::Tick(float DeltaSeconds)
 
 	if (State == EVGEntityState::Watching)
 	{
-		FacePlayer();
-		if (TimeLeft <= 0.f || (WatchVanishDistance > 0.f && Distance < WatchVanishDistance))
+		// Quieta: no gira como una torreta. Mirarla directamente rompe la aparicion.
+		APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
+		if (PC && PC->PlayerCameraManager)
+		{
+			const FVector Eye = PC->PlayerCameraManager->GetCameraLocation();
+			const FVector Aim = (GetActorLocation() + FVector(0, 0, 150) - Eye).GetSafeNormal();
+			const bool bLooking = FVector::DotProduct(PC->PlayerCameraManager->GetActorRotation().Vector(), Aim) > 0.97f;
+			FHitResult Hit;
+			FCollisionQueryParams Query(SCENE_QUERY_STAT(VGEntityGaze), true, this);
+			Query.AddIgnoredActor(Player);
+			const bool bBlocked = GetWorld()->LineTraceSingleByChannel(Hit, Eye, GetActorLocation() + FVector(0, 0, 150), ECC_Visibility, Query);
+			GazeTime = bLooking && !bBlocked ? GazeTime + DeltaSeconds : 0.f;
+		}
+		if (TimeLeft <= 0.f || GazeTime > 1.f || (WatchVanishDistance > 0.f && Distance < WatchVanishDistance))
 		{
 			Vanish(false);
 		}
@@ -364,4 +389,43 @@ void AVGEntity::Tick(float DeltaSeconds)
 	{
 		Vanish(false);
 	}
+}
+
+bool AVGEntity::CanManifestAt(const FVector& Location) const
+{
+	const APawn* Player = GetPlayer();
+	if (!Player || !GetWorld() || State != EVGEntityState::Hidden)
+	{
+		return false;
+	}
+	const float Now = GetWorld()->GetTimeSeconds();
+	const FVector Feet = Player->GetActorLocation() - FVector(0, 0, 89.f);
+	const float Distance = FVector::Dist2D(Feet, Location);
+	if (Now < EarliestAppearance || Distance < MinimumSpawnDistance || Distance > 2600.f || FMath::Abs(Feet.Z - Location.Z) > 120.f)
+	{
+		return false;
+	}
+	for (TActorIterator<AVGEntity> It(GetWorld()); It; ++It)
+	{
+		if (Now - It->LastAppearanceTime < AppearanceCooldown)
+		{
+			return false;
+		}
+	}
+	// No se materializa delante de la camara. Si la pared la oculta, puede esperar al jugador.
+	APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
+	if (PC && PC->PlayerCameraManager)
+	{
+		const FVector Eye = PC->PlayerCameraManager->GetCameraLocation();
+		const FVector Head = Location + FVector(0, 0, 150);
+		const float Dot = FVector::DotProduct(PC->PlayerCameraManager->GetActorRotation().Vector(), (Head - Eye).GetSafeNormal());
+		FHitResult Hit;
+		FCollisionQueryParams Query(SCENE_QUERY_STAT(VGEntitySpawn), true, this);
+		Query.AddIgnoredActor(Player);
+		if (Dot > 0.35f && !GetWorld()->LineTraceSingleByChannel(Hit, Eye, Head, ECC_Visibility, Query))
+		{
+			return false;
+		}
+	}
+	return true;
 }

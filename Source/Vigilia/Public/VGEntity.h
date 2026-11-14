@@ -109,6 +109,20 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Entity")
 	float CatchDistance = 75.f;
 
+	/** Guardas comunes a TODAS las secuencias, incluidas las de niveles antiguos. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Pacing")
+	float EarliestAppearance = 300.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Pacing")
+	float MinimumSpawnDistance = 800.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Pacing")
+	float AppearanceCooldown = 120.f;
+
+	/** Las persecuciones requieren diseno y navegacion propios; desactivadas en esta entrega. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Pacing")
+	bool bAllowChase = false;
+
 	/** Segundos entre cada tiron de movimiento (movimiento antinatural, no fluido). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Entity")
 	float StepInterval = 0.16f;
@@ -127,6 +141,10 @@ public:
 	TObjectPtr<USoundBase> CatchSound;
 
 private:
+	bool CanManifestAt(const FVector& Location) const;
+	float LastAppearanceTime = -10000.f;
+	float GazeTime = 0.f;
+
 	void FacePlayer();
 	void FaceDirection(const FVector& Direction);
 	void PlayAnim(UAnimationAsset* Anim, float Rate);

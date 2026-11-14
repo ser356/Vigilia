@@ -268,6 +268,9 @@ def _import_polyhaven_texture(asset_id, folder):
 
 def resolve_all(manifest):
     """Devuelve {nombre: Resolved o None} para slots y superficies. Los titulos largos reclaman primero."""
+    global _fab_index
+    _fab_index = None
+    _fab_claimed.clear()
     entries = []
     for group in ("slots", "surfaces"):
         for name, spec in manifest[group].items():

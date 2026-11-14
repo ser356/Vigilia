@@ -45,7 +45,7 @@ public:
 	TObjectPtr<UPointLightComponent> Light;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Lamp")
-	bool bOn = true;
+	bool bOn = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Vigilia|Lamp")
 	float OnIntensity = 800.f;

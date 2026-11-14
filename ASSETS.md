@@ -1,6 +1,6 @@
 # Assets de Fab
 
-Todos gratis, Fab Standard License (uso comercial permitido). Verificados en Fab el 13-11-2026.
+Seleccion de recursos gratuitos del proyecto; comprueba el precio y la licencia de cada ficha al adquirirlos. La estatua Madre usa CC-BY; no se utiliza como respaldo de la presencia.
 Para cada uno: **Add to My Library** en fab.com y despues **Add to Project** desde Window > Fab en el editor.
 
 | | Hueco | Asset | Vendedor |
@@ -50,5 +50,34 @@ Para cada uno: **Add to My Library** en fab.com y despues **Add to Project** des
 Mientras falte alguno, el script usa un respaldo CC0 de Poly Haven si existe (ejecuta `python3 Tools/fetch_polyhaven.py`).
 El contenido de Fab no se versiona en git (`Content/Fab/` esta en `.gitignore`).
 
-Las entidades usan el primer personaje con esqueleto que encuentren en el proyecto, con sus animaciones de idle, andar y correr.
-Alternativa sin Fab: en el editor, Add > Add Feature or Content Pack > Third Person (maniqui de Unreal; se muestra como silueta negra).
+La presencia solo acepta un personaje con nombre de terror y animacion idle del mismo esqueleto.
+Se presenta con material de silueta. Sin idle compatible no aparece; no se usa el maniqui ni una estatua.
+La enfermera ya listada es una opcion tecnica existente, no un personaje nuevo creado para esta revision.
+
+## Flujo actual de obtencion (revisado el 14-11-2026)
+
+Quixel anuncio el 5-11-2026 que la biblioteca completa de Megascans vuelve a ser gratuita en Fab:
+https://quixel.com/news/update-megascans-are-going-free-again
+
+1. En Unreal: **Window > Fab** (o el boton Fab del Content Drawer). Si falta, activar el plugin Fab.
+2. Abrir la ficha gratuita, **Add to My Library**, y despues **My Library > Add to Project**.
+3. Elegir **Medium** para empezar en el M4. El constructor limita a 2K las texturas Fab utilizadas.
+4. Volver a ejecutar `Scripts/build_room.py`. El resolver prioriza Fab sobre el respaldo CC0.
+   Ahora refresca el indice en cada reconstruccion para reconocer recursos recien importados.
+5. Revisar `Saved/Vigilia/asset_report.md`: distingue lo usado, los respaldos y los faltantes.
+
+Tambien existe Fab en Epic Games Launcher para descargar/exportar. Una ficha con FBX/GLB no es
+un paquete Unreal: usa la integracion para importarlo, o importa el archivo y sus materiales en
+`/Game/Fab/Nombre_Del_Asset`. El resolver identifica carpetas por el titulo del manifiesto.
+No hay un descargador autenticado de Fab en este repositorio: `fetch_polyhaven.py` descarga
+exclusivamente el respaldo CC0; no adquiere productos de tu cuenta de Epic.
+
+Documentacion oficial: https://dev.epicgames.com/documentation/en-us/unreal-engine/fab-window-in-unreal-engine
+
+### Escalera escaneada para una futura pasada artistica
+
+[Modular Wooden Stairs — Quixel](https://www.fab.com/listings/ded9d3b3-3142-4983-a98b-9541419ca53f)
+aparece gratis en la ficha revisada. No esta integrada automaticamente: sus 4,06 x 3 x 1,8 m
+no corresponden directamente a los dos tramos calculados. La escalera actual usa peldanos
+procedurales con parquet del manifiesto, con huecos y colisiones comprobables. Sustituirla por
+la malla escaneada requiere ajustar el encaje y volver a probar el recorrido en Unreal.
